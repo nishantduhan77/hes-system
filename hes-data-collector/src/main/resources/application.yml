@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: hes-data-collector
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hes
+    username: hes_user
+    password: hes_password
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: true
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      client-id: ${spring.application.name}
+      transaction-id-prefix: tx.
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+
+server:
+  port: 8081
+
+logging:
+  level:
+    com.hes: INFO
+    org.springframework: WARN
+    org.hibernate: WARN 
