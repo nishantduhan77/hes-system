@@ -1,24 +1,23 @@
-import { useMutation as useReactMutation, UseMutationOptions } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
+import { useMutation as useReactQueryMutation, UseMutationOptions } from '@tanstack/react-query';
 import { useSnackbar } from 'notistack';
 
-export function useMutation<TData = unknown, TError = AxiosError, TVariables = unknown>(
+export function useMutation<TData = unknown, TError = Error, TVariables = void>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   options?: Omit<UseMutationOptions<TData, TError, TVariables>, 'mutationFn'>
 ) {
   const { enqueueSnackbar } = useSnackbar();
 
-  return useReactMutation<TData, TError, TVariables>({
+  return useReactQueryMutation<TData, TError, TVariables>({
     mutationFn,
-    onError: (error) => {
-      const message =
-        error instanceof AxiosError
-          ? error.response?.data?.message || error.message
-          : 'An unexpected error occurred';
-      
+    onError: (error: TError, variables: TVariables) => {
+      const message = error instanceof Error ? error.message : 'An error occurred';
       enqueueSnackbar(message, { variant: 'error' });
-      options?.onError?.(error);
+      if (options?.onError) {
+        options.onError(error, variables, undefined);
+      }
     },
     ...options,
   });
-} 
+}
+
+export default useMutation; 

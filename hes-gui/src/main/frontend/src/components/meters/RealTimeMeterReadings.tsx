@@ -4,9 +4,9 @@ import {
   Card,
   CardContent,
   Typography,
-  Grid,
-  CircularProgress,
+  CircularProgress as MuiCircularProgress,
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import {
   LineChart,
   Line,
@@ -52,7 +52,7 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" p={3}>
-        <CircularProgress />
+        <MuiCircularProgress />
       </Box>
     );
   }
@@ -64,7 +64,7 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
           Real-time Readings - Meter {meterId}
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12}>
+          <Grid xs={12}>
             <Box height={300}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={readings}>
@@ -101,23 +101,25 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
               </ResponsiveContainer>
             </Box>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <Typography variant="subtitle2" color="textSecondary">
-              Latest Values
-            </Typography>
-            {readings.length > 0 && (
-              <>
-                <Typography>
-                  Voltage: {readings[readings.length - 1].voltage.toFixed(2)} V
-                </Typography>
-                <Typography>
-                  Current: {readings[readings.length - 1].current.toFixed(2)} A
-                </Typography>
-                <Typography>
-                  Frequency: {readings[readings.length - 1].frequency.toFixed(2)} Hz
-                </Typography>
-              </>
-            )}
+          <Grid xs={12} sm={4}>
+            <Box>
+              <Typography variant="subtitle2" color="textSecondary">
+                Latest Values
+              </Typography>
+              {readings.length > 0 && (
+                <>
+                  <Typography>
+                    Voltage: {readings[readings.length - 1].voltage.toFixed(2)} V
+                  </Typography>
+                  <Typography>
+                    Current: {readings[readings.length - 1].current.toFixed(2)} A
+                  </Typography>
+                  <Typography>
+                    Frequency: {readings[readings.length - 1].frequency.toFixed(2)} Hz
+                  </Typography>
+                </>
+              )}
+            </Box>
           </Grid>
         </Grid>
       </CardContent>

@@ -90,10 +90,16 @@ const MeterManagement: React.FC = () => {
         <DataGrid
           rows={meters}
           columns={columns}
-          pageSize={10}
-          rowsPerPageOptions={[10]}
+          initialState={{
+            pagination: {
+              paginationModel: {
+                pageSize: 10,
+              },
+            },
+          }}
+          pageSizeOptions={[10]}
           checkboxSelection
-          disableSelectionOnClick
+          disableRowSelectionOnClick
         />
       </Paper>
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Grid,
+  Grid as MuiGrid,
   Paper,
   Typography,
   Box,
@@ -17,6 +17,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+
+const Grid = MuiGrid as React.ComponentType<any>;
 
 // Mock data - replace with actual API calls
 const meterStats = {

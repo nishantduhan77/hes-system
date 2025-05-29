@@ -3,12 +3,14 @@ import {
   Box,
   Paper,
   Typography,
-  Grid,
+  Grid as MuiGrid,
   List,
   ListItem,
   ListItemText,
   CircularProgress,
 } from '@mui/material';
+
+const Grid = MuiGrid as React.ComponentType<any>;
 
 // Mock data - replace with actual API calls
 const systemInfo = {

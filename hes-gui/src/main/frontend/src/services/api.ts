@@ -20,17 +20,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+interface ErrorResponse {
+  message: string;
+}
+
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      authService.logout();
-      return Promise.reject(new Error('Session expired. Please login again.'));
+  (error: AxiosError<ErrorResponse>) => {
+    if (error.response?.data) {
+      return Promise.reject(
+        new Error(error.response.data.message || 'An error occurred')
+      );
     }
-    return Promise.reject(
-      new Error(error.response?.data?.message || error.message)
-    );
+    return Promise.reject(error);
   }
 );
 
@@ -60,4 +63,6 @@ export const systemApi = {
   getSystemMetrics: () => api.get('/system/metrics'),
   getRecentEvents: () => api.get('/system/events'),
   getAlerts: () => api.get('/system/alerts'),
-}; 
+};
+
+export default api; 
