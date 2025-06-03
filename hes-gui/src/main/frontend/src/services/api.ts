@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { Meter, MeterReading } from '../types/meter';
 import { authService } from './auth';
 
@@ -15,6 +15,8 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = authService.getToken();
   if (token) {
+    // Ensure headers object exists
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -27,7 +29,7 @@ interface ErrorResponse {
 // Add response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ErrorResponse>) => {
+  (error) => {
     if (error.response?.data) {
       return Promise.reject(
         new Error(error.response.data.message || 'An error occurred')

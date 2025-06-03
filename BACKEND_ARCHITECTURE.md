@@ -87,9 +87,21 @@ CREATE TABLE meter_readings (
     PRIMARY KEY (meter_id, timestamp)
 );
 
+-- Additional tables for specific meter readings
+CREATE TABLE power_readings (
+    meter_id UUID NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    active_power_import DOUBLE PRECISION,
+    active_power_export DOUBLE PRECISION,
+    voltage_r_phase DOUBLE PRECISION,
+    current_r_phase DOUBLE PRECISION,
+    quality_code INTEGER,
+    PRIMARY KEY (meter_id, timestamp)
+);
+
 -- Create hypertable with partitioning
 SELECT create_hypertable(
-    'meter_readings',
+    'power_readings',
     'timestamp',
     chunk_time_interval => INTERVAL '1 day',
     partitioning_column => 'meter_id',
@@ -151,7 +163,145 @@ public class MeterController {
     public ResponseEntity<Void> connectMeter(@PathVariable UUID meterId) {
         // Implementation
     }
+
+    @GetMapping("/{meterId}/readings/table")
+    public ResponseEntity<Page<PowerReading>> getPowerReadingsTable(
+        @PathVariable UUID meterId,
+        @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime from,
+        @RequestParam @DateTimeFormat(iso = ISO.DATE_TIME) LocalDateTime to,
+        @RequestParam(defaultValue = "timestamp,desc") String[] sort,
+        Pageable pageable
+    ) {
+        // Implementation for tabular data
+    }
 }
+```
+
+#### Frontend Integration
+```typescript
+// API Types
+interface MeterReading {
+    meterId: string;
+    timestamp: string;
+    readingType: string;
+    value: number;
+    qualityCode: number;
+}
+
+interface PowerReading {
+    meterId: string;
+    timestamp: string;
+    activePowerImport: number;
+    activePowerExport: number;
+    voltageRPhase: number;
+    currentRPhase: number;
+    qualityCode: number;
+}
+
+// React Query Integration
+const useMeterReadings = (meterId: string, from: Date, to: Date) => {
+    return useQuery({
+        queryKey: ['readings', meterId, from, to],
+        queryFn: () => api.getMeterReadings(meterId, from, to),
+        staleTime: 30000, // 30 seconds
+    });
+};
+
+// React Query Integration for Table Data
+const usePowerReadingsTable = (
+    meterId: string,
+    from: Date,
+    to: Date,
+    page: number,
+    pageSize: number,
+    sortModel: GridSortModel
+) => {
+    return useQuery({
+        queryKey: ['readings-table', meterId, from, to, page, pageSize, sortModel],
+        queryFn: () => api.getPowerReadingsTable(meterId, from, to, {
+            page,
+            pageSize,
+            sort: sortModel.map(s => `${s.field},${s.sort}`).join(';')
+        }),
+        staleTime: 30000, // 30 seconds
+    });
+};
+
+// MUI Data Grid Component
+const MeterReadingsTable: React.FC<{ meterId: string }> = ({ meterId }) => {
+    const [page, setPage] = useState(0);
+    const [pageSize, setPageSize] = useState(25);
+    const [sortModel, setSortModel] = useState<GridSortModel>([
+        { field: 'timestamp', sort: 'desc' }
+    ]);
+
+    const { data, isLoading } = usePowerReadingsTable(
+        meterId,
+        startDate,
+        endDate,
+        page,
+        pageSize,
+        sortModel
+    );
+
+    const columns: GridColDef[] = [
+        {
+            field: 'timestamp',
+            headerName: 'Time',
+            width: 200,
+            valueFormatter: (params) => 
+                format(new Date(params.value), 'yyyy-MM-dd HH:mm:ss')
+        },
+        {
+            field: 'activePowerImport',
+            headerName: 'Active Power Import (kW)',
+            width: 180,
+            valueFormatter: (params) => 
+                params.value.toFixed(2)
+        },
+        {
+            field: 'activePowerExport',
+            headerName: 'Active Power Export (kW)',
+            width: 180,
+            valueFormatter: (params) => 
+                params.value.toFixed(2)
+        },
+        {
+            field: 'voltageRPhase',
+            headerName: 'Voltage R-Phase (V)',
+            width: 160,
+            valueFormatter: (params) => 
+                params.value.toFixed(1)
+        },
+        {
+            field: 'currentRPhase',
+            headerName: 'Current R-Phase (A)',
+            width: 160,
+            valueFormatter: (params) => 
+                params.value.toFixed(2)
+        }
+    ];
+
+    return (
+        <DataGrid
+            rows={data?.content || []}
+            columns={columns}
+            pagination
+            paginationMode="server"
+            rowCount={data?.totalElements || 0}
+            loading={isLoading}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            sortingMode="server"
+            sortModel={sortModel}
+            onSortModelChange={setSortModel}
+            disableSelectionOnClick
+            autoHeight
+        />
+    );
+};
 ```
 
 #### WebSocket Configuration
@@ -321,3 +471,217 @@ pg_ctl start -D $PGDATA
    - MDM system integration
    - Billing system integration
    - Asset management integration 
+
+## Database Tables and Sample Queries
+
+### Core Tables
+
+1. **meter_readings** - Raw meter readings
+```sql
+CREATE TABLE meter_readings (
+    meter_id UUID NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    reading_type VARCHAR(50),
+    value DOUBLE PRECISION,
+    quality_code INTEGER,
+    PRIMARY KEY (meter_id, timestamp)
+);
+```
+
+2. **power_readings** - Specific power measurements
+```sql
+CREATE TABLE power_readings (
+    meter_id UUID NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    active_power_import DOUBLE PRECISION,
+    active_power_export DOUBLE PRECISION,
+    voltage_r_phase DOUBLE PRECISION,
+    current_r_phase DOUBLE PRECISION,
+    quality_code INTEGER,
+    PRIMARY KEY (meter_id, timestamp)
+);
+```
+
+3. **meters** - Meter information
+```sql
+CREATE TABLE meters (
+    meter_id UUID PRIMARY KEY,
+    serial_number VARCHAR(50) UNIQUE,
+    manufacturer VARCHAR(100),
+    model VARCHAR(100),
+    installation_date TIMESTAMPTZ,
+    firmware_version VARCHAR(50),
+    status VARCHAR(20),
+    last_communication TIMESTAMPTZ
+);
+```
+
+### Presentation Queries
+
+1. **Latest Readings for a Specific Meter**
+```sql
+SELECT 
+    timestamp,
+    active_power_import,
+    active_power_export,
+    voltage_r_phase,
+    current_r_phase
+FROM power_readings
+WHERE meter_id = '12345678-1234-5678-1234-567812345678'
+    AND timestamp >= NOW() - INTERVAL '24 hours'
+ORDER BY timestamp DESC
+LIMIT 100;
+```
+
+2. **Hourly Power Consumption Average**
+```sql
+SELECT 
+    time_bucket('1 hour', timestamp) AS hour,
+    AVG(active_power_import) as avg_import,
+    AVG(active_power_export) as avg_export,
+    COUNT(*) as reading_count
+FROM power_readings
+WHERE timestamp >= NOW() - INTERVAL '7 days'
+GROUP BY hour
+ORDER BY hour DESC;
+```
+
+3. **Voltage Quality Analysis**
+```sql
+SELECT 
+    meter_id,
+    COUNT(*) as total_readings,
+    AVG(voltage_r_phase) as avg_voltage,
+    MIN(voltage_r_phase) as min_voltage,
+    MAX(voltage_r_phase) as max_voltage,
+    COUNT(*) FILTER (WHERE voltage_r_phase < 220) as undervoltage_count,
+    COUNT(*) FILTER (WHERE voltage_r_phase > 240) as overvoltage_count
+FROM power_readings
+WHERE timestamp >= NOW() - INTERVAL '30 days'
+GROUP BY meter_id;
+```
+
+4. **Meter Communication Status**
+```sql
+SELECT 
+    m.serial_number,
+    m.manufacturer,
+    m.status,
+    m.last_communication,
+    NOW() - m.last_communication as time_since_last_comm
+FROM meters m
+WHERE m.status != 'DECOMMISSIONED'
+ORDER BY m.last_communication DESC;
+```
+
+5. **Daily Energy Consumption Pattern**
+```sql
+SELECT 
+    EXTRACT(HOUR FROM timestamp) as hour_of_day,
+    AVG(active_power_import) as avg_consumption
+FROM power_readings
+WHERE timestamp >= NOW() - INTERVAL '30 days'
+GROUP BY hour_of_day
+ORDER BY hour_of_day;
+```
+
+6. **Quality Code Analysis**
+```sql
+SELECT 
+    quality_code,
+    COUNT(*) as occurrence_count,
+    COUNT(*) * 100.0 / SUM(COUNT(*)) OVER () as percentage
+FROM power_readings
+WHERE timestamp >= NOW() - INTERVAL '7 days'
+GROUP BY quality_code
+ORDER BY occurrence_count DESC;
+```
+
+7. **Missing Data Detection**
+```sql
+WITH expected_readings AS (
+    SELECT generate_series(
+        date_trunc('hour', NOW()) - INTERVAL '24 hours',
+        date_trunc('hour', NOW()),
+        '30 minutes'
+    ) as expected_timestamp
+)
+SELECT 
+    m.meter_id,
+    m.serial_number,
+    e.expected_timestamp,
+    CASE WHEN pr.timestamp IS NULL THEN 'Missing' ELSE 'Present' END as reading_status
+FROM expected_readings e
+CROSS JOIN meters m
+LEFT JOIN power_readings pr 
+    ON pr.meter_id = m.meter_id 
+    AND pr.timestamp = e.expected_timestamp
+WHERE pr.timestamp IS NULL
+ORDER BY m.meter_id, e.expected_timestamp;
+```
+
+8. **Peak Power Usage Times**
+```sql
+WITH daily_peaks AS (
+    SELECT 
+        date_trunc('day', timestamp) as day,
+        MAX(active_power_import) as peak_import
+    FROM power_readings
+    WHERE timestamp >= NOW() - INTERVAL '30 days'
+    GROUP BY day
+)
+SELECT 
+    pr.timestamp,
+    m.serial_number,
+    pr.active_power_import,
+    pr.voltage_r_phase,
+    pr.current_r_phase
+FROM daily_peaks dp
+JOIN power_readings pr 
+    ON date_trunc('day', pr.timestamp) = dp.day 
+    AND pr.active_power_import = dp.peak_import
+JOIN meters m 
+    ON pr.meter_id = m.meter_id
+ORDER BY pr.timestamp DESC;
+```
+
+### Useful Views
+
+1. **Current Day Summary**
+```sql
+CREATE OR REPLACE VIEW meter_daily_summary AS
+SELECT 
+    m.serial_number,
+    COUNT(pr.*) as reading_count,
+    AVG(pr.active_power_import) as avg_import,
+    MAX(pr.active_power_import) as max_import,
+    AVG(pr.voltage_r_phase) as avg_voltage,
+    MIN(pr.voltage_r_phase) as min_voltage,
+    MAX(pr.voltage_r_phase) as max_voltage
+FROM meters m
+LEFT JOIN power_readings pr 
+    ON m.meter_id = pr.meter_id
+    AND pr.timestamp >= date_trunc('day', NOW())
+GROUP BY m.meter_id, m.serial_number;
+```
+
+2. **Meter Health Status**
+```sql
+CREATE OR REPLACE VIEW meter_health_status AS
+SELECT 
+    m.serial_number,
+    m.status,
+    m.last_communication,
+    CASE 
+        WHEN m.last_communication < NOW() - INTERVAL '24 hours' THEN 'Critical'
+        WHEN m.last_communication < NOW() - INTERVAL '6 hours' THEN 'Warning'
+        ELSE 'Good'
+    END as communication_status,
+    COUNT(pr.*) FILTER (WHERE pr.timestamp >= NOW() - INTERVAL '24 hours') as readings_last_24h,
+    COUNT(pr.*) FILTER (WHERE pr.quality_code != 0) as error_readings_24h
+FROM meters m
+LEFT JOIN power_readings pr 
+    ON m.meter_id = pr.meter_id
+    AND pr.timestamp >= NOW() - INTERVAL '24 hours'
+GROUP BY m.meter_id, m.serial_number, m.status, m.last_communication;
+``` 

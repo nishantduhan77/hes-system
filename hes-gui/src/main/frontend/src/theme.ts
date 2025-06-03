@@ -1,7 +1,8 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, ThemeOptions } from '@mui/material/styles';
 
-const theme = createTheme({
+const themeOptions: ThemeOptions = {
   palette: {
+    mode: 'light',
     primary: {
       main: '#1976d2',
     },
@@ -9,11 +10,17 @@ const theme = createTheme({
       main: '#dc004e',
     },
   },
-  typography: {
-    h6: {
-      fontWeight: 500,
+  components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: '#f5f5f5',
+        },
+      },
     },
   },
-});
+};
+
+const theme = createTheme(themeOptions);
 
 export default theme; 

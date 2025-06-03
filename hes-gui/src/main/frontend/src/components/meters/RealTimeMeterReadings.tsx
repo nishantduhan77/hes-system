@@ -24,17 +24,32 @@ interface RealTimeMeterReadingsProps {
   meterId: string;
 }
 
+interface ReadingsByType {
+  timestamp: string;
+  power: number;
+  voltage: number;
+  current: number;
+}
+
 const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
   meterId,
 }) => {
-  const [readings, setReadings] = useState<MeterReading[]>([]);
+  const [readings, setReadings] = useState<ReadingsByType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const handleReading = (reading: MeterReading) => {
       if (reading.meterId === meterId) {
+        // Convert the single reading value into separate metrics based on unit
+        const newReading: ReadingsByType = {
+          timestamp: reading.timestamp,
+          power: reading.unit === 'kW' ? reading.value : 0,
+          voltage: reading.unit === 'V' ? reading.value : 230, // Default voltage if not provided
+          current: reading.unit === 'A' ? reading.value : 0,
+        };
+
         setReadings((prev) => {
-          const newReadings = [...prev, reading];
+          const newReadings = [...prev, newReading];
           // Keep last 50 readings
           return newReadings.slice(-50);
         });
@@ -56,6 +71,8 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
       </Box>
     );
   }
+
+  const latestReading = readings[readings.length - 1];
 
   return (
     <Card>
@@ -93,9 +110,9 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
                   />
                   <Line
                     type="monotone"
-                    dataKey="frequency"
+                    dataKey="power"
                     stroke="#ffc658"
-                    name="Frequency (Hz)"
+                    name="Power (kW)"
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -106,16 +123,16 @@ const RealTimeMeterReadings: React.FC<RealTimeMeterReadingsProps> = ({
               <Typography variant="subtitle2" color="textSecondary">
                 Latest Values
               </Typography>
-              {readings.length > 0 && (
+              {latestReading && (
                 <>
                   <Typography>
-                    Voltage: {readings[readings.length - 1].voltage.toFixed(2)} V
+                    Voltage: {latestReading.voltage.toFixed(2)} V
                   </Typography>
                   <Typography>
-                    Current: {readings[readings.length - 1].current.toFixed(2)} A
+                    Current: {latestReading.current.toFixed(2)} A
                   </Typography>
                   <Typography>
-                    Frequency: {readings[readings.length - 1].frequency.toFixed(2)} Hz
+                    Power: {latestReading.power.toFixed(2)} kW
                   </Typography>
                 </>
               )}

@@ -60,12 +60,16 @@ Key Components:
   - Delete meters
 
 ### 4. GUI Module (`hes-gui/`)
-Web interface for meter management.
+Web interface for meter management built with React and TypeScript.
 
 Key Components:
-- Web dashboard for meter monitoring
-- Real-time meter readings display
-- System status information
+- Modern React-based dashboard for meter monitoring
+- Material UI components for consistent design
+- Real-time meter readings display using React Query
+- Interactive charts with Recharts
+- System status notifications with Notistack
+- Type-safe development with TypeScript
+- Comprehensive testing setup with Jest and React Testing Library
 
 ## Technology Stack
 
@@ -74,12 +78,22 @@ Key Components:
    - Spring Boot 3.2.3
    - Spring Shell
    - Maven
+   - React 18.2.0
+   - TypeScript 4.9.5
 
-2. **Communication Protocols**:
+2. **Frontend Technologies**:
+   - Material UI (MUI) 5.15.0
+   - React Query 4.29.7
+   - React Router 6.11.2
+   - Recharts 2.6.2
+   - Axios 1.9.0
+   - Notistack 3.0.1
+
+3. **Communication Protocols**:
    - DLMS/COSEM for meter communication
    - REST APIs for service integration
 
-3. **Data Models**:
+4. **Data Models**:
    - Lombok for boilerplate reduction
    - Jakarta Validation for data validation
 

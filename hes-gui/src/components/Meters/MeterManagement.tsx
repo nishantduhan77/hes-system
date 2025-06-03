@@ -12,10 +12,16 @@ import {
   TableRow,
   CircularProgress,
   Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import { styled } from '@mui/material/styles';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend } from 'recharts';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SettingsIcon from '@mui/icons-material/Settings';
+import AddIcon from '@mui/icons-material/Add';
 
 const Item = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -42,39 +48,66 @@ interface Meter {
 interface MeterReading {
   timestamp: string;
   value: number;
+  obisCode: string;
 }
 
 interface MeterManagementProps {
   onMeterSelect: (meter: Meter) => void;
 }
 
-// Mock data for development
-const mockMeters: Meter[] = [
-  {
-    id: '1',
-    serialNumber: 'METER001',
-    manufacturer: 'ABB',
-    ipAddress: '192.168.1.100',
-    port: 8080,
-    status: 'CONNECTED',
-  },
-  {
-    id: '2',
-    serialNumber: 'METER002',
-    manufacturer: 'Schneider',
-    ipAddress: '192.168.1.101',
-    port: 8080,
-    status: 'DISCONNECTED',
-  },
-];
+// Indian OBIS Codes
+const INDIAN_OBIS_CODES = {
+  ACTIVE_ENERGY_IMPORT: '1.0.1.8.0.255',
+  ACTIVE_ENERGY_EXPORT: '1.0.2.8.0.255',
+  REACTIVE_ENERGY_IMPORT: '1.0.3.8.0.255',
+  REACTIVE_ENERGY_EXPORT: '1.0.4.8.0.255',
+  VOLTAGE_L1: '1.0.32.7.0.255',
+  CURRENT_L1: '1.0.31.7.0.255',
+  FREQUENCY: '1.0.14.7.0.255',
+  POWER_FACTOR: '1.0.13.7.0.255',
+};
 
-const generateMockReadings = (): MeterReading[] => {
+// Generate random meter data with Indian context
+const generateRandomMeter = (index: number): Meter => {
+  const manufacturers = ['L&T', 'Secure Meters', 'Genus', 'HPL'];
+  const states = ['MH', 'DL', 'KA', 'TN', 'GJ'];
+  const serialPrefix = states[Math.floor(Math.random() * states.length)];
+  
+  return {
+    id: `METER_${Math.random().toString(36).substr(2, 9)}`,
+    serialNumber: `${serialPrefix}${String(index + 1).padStart(8, '0')}`,
+    manufacturer: manufacturers[Math.floor(Math.random() * manufacturers.length)],
+    ipAddress: `192.168.1.${100 + index}`,
+    port: 4059,
+    status: Math.random() > 0.3 ? 'CONNECTED' : 'DISCONNECTED',
+  };
+};
+
+const generateMockReadings = (obisCode: string): MeterReading[] => {
   const readings: MeterReading[] = [];
   const now = new Date();
+  
+  // Generate values based on OBIS code
+  const generateValue = (obisCode: string): number => {
+    switch (obisCode) {
+      case INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT:
+        return Math.random() * 1000 + 5000; // 5000-6000 kWh
+      case INDIAN_OBIS_CODES.VOLTAGE_L1:
+        return Math.random() * 10 + 230; // 230-240V
+      case INDIAN_OBIS_CODES.CURRENT_L1:
+        return Math.random() * 5 + 10; // 10-15A
+      case INDIAN_OBIS_CODES.FREQUENCY:
+        return Math.random() * 0.5 + 49.8; // 49.8-50.3Hz
+      default:
+        return Math.random() * 100;
+    }
+  };
+
   for (let i = 0; i < 30; i++) {
     readings.push({
       timestamp: new Date(now.getTime() - i * 60000).toISOString(),
-      value: Math.random() * 100 + 200, // Random value between 200-300
+      value: generateValue(obisCode),
+      obisCode,
     });
   }
   return readings.reverse();
@@ -87,6 +120,7 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isBackendAvailable, setIsBackendAvailable] = useState(false);
+  const [selectedObisCode, setSelectedObisCode] = useState(INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT);
 
   // Check backend availability
   useEffect(() => {
@@ -103,46 +137,25 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
     checkBackend();
   }, []);
 
-  // Load mock or real data based on backend availability
+  // Generate initial meters if none exist
   useEffect(() => {
-    if (!isBackendAvailable) {
-      setMeters(mockMeters);
-      setReadings(generateMockReadings());
+    if (!isBackendAvailable && meters.length === 0) {
+      const initialMeters = Array.from({ length: 10 }, (_, i) => generateRandomMeter(i));
+      setMeters(initialMeters);
       setLoading(false);
-      return;
     }
-
-    const fetchMeters = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/api/meters');
-        const data = await response.json();
-        setMeters(data);
-      } catch (err) {
-        setError('Failed to fetch meters');
-        setMeters(mockMeters); // Fallback to mock data
-      }
-      setLoading(false);
-    };
-
-    fetchMeters();
-  }, [isBackendAvailable]);
+  }, [isBackendAvailable, meters.length]);
 
   // Simulate real-time updates when backend is not available
   useEffect(() => {
     if (!isBackendAvailable && selectedMeter) {
       const interval = setInterval(() => {
-        setReadings(prev => {
-          const newReading = {
-            timestamp: new Date().toISOString(),
-            value: Math.random() * 100 + 200,
-          };
-          return [...prev.slice(1), newReading];
-        });
+        setReadings(generateMockReadings(selectedObisCode));
       }, 5000);
 
       return () => clearInterval(interval);
     }
-  }, [isBackendAvailable, selectedMeter]);
+  }, [isBackendAvailable, selectedMeter, selectedObisCode]);
 
   const handleConnect = async (meterId: string) => {
     if (!isBackendAvailable) {
@@ -203,15 +216,45 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
   const handleMeterClick = (meter: Meter) => {
     setSelectedMeter(meter);
     onMeterSelect(meter);
+    setReadings(generateMockReadings(selectedObisCode));
+  };
+
+  const handleGenerateMeters = () => {
+    const newMeters = Array.from({ length: 10 }, (_, i) => generateRandomMeter(i));
+    setMeters(newMeters);
+  };
+
+  const handleRefreshMeter = (meterId: string) => {
+    if (selectedMeter?.id === meterId) {
+      setReadings(generateMockReadings(selectedObisCode));
+    }
+  };
+
+  const handleDeleteMeter = (meterId: string) => {
+    setMeters(prev => prev.filter(meter => meter.id !== meterId));
+    if (selectedMeter?.id === meterId) {
+      setSelectedMeter(null);
+      setReadings([]);
+    }
   };
 
   if (loading) return <CircularProgress />;
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Meter Management
-      </Typography>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="h4">
+          Meter Management
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleGenerateMeters}
+        >
+          Generate 10 Test Meters
+        </Button>
+      </Box>
 
       {!isBackendAvailable && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -231,7 +274,7 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
                     <TableCell>IP Address</TableCell>
                     <TableCell>Port</TableCell>
                     <TableCell>Status</TableCell>
-                    <TableCell>Actions</TableCell>
+                    <TableCell align="center">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -239,37 +282,96 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
                     <TableRow 
                       key={meter.id}
                       onClick={() => handleMeterClick(meter)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{ 
+                        cursor: 'pointer',
+                        backgroundColor: selectedMeter?.id === meter.id ? 'action.selected' : 'inherit',
+                        '&:hover': { backgroundColor: 'action.hover' },
+                      }}
                     >
                       <TableCell>{meter.serialNumber}</TableCell>
                       <TableCell>{meter.manufacturer}</TableCell>
                       <TableCell>{meter.ipAddress}</TableCell>
                       <TableCell>{meter.port}</TableCell>
-                      <TableCell>{meter.status}</TableCell>
                       <TableCell>
-                        {meter.status === 'DISCONNECTED' ? (
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleConnect(meter.id);
-                            }}
-                          >
-                            Connect
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="contained"
-                            color="error"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDisconnect(meter.id);
-                            }}
-                          >
-                            Disconnect
-                          </Button>
-                        )}
+                        <Box
+                          component="span"
+                          sx={{
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            backgroundColor: meter.status === 'CONNECTED' ? 'success.light' : 'error.light',
+                            color: 'common.white',
+                          }}
+                        >
+                          {meter.status}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box>
+                          {meter.status === 'DISCONNECTED' ? (
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleConnect(meter.id);
+                              }}
+                              sx={{ mr: 1 }}
+                            >
+                              Connect
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="contained"
+                              color="error"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDisconnect(meter.id);
+                              }}
+                              sx={{ mr: 1 }}
+                            >
+                              Disconnect
+                            </Button>
+                          )}
+                          <Tooltip title="Refresh Readings">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRefreshMeter(meter.id);
+                              }}
+                              sx={{ mr: 1 }}
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Configure">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // TODO: Implement meter configuration
+                              }}
+                              sx={{ mr: 1 }}
+                            >
+                              <SettingsIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMeter(meter.id);
+                              }}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -282,16 +384,90 @@ const MeterManagement: React.FC<MeterManagementProps> = ({ onMeterSelect }) => {
         {selectedMeter && (
           <Grid xs={12}>
             <Item sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Real-time Readings - {selectedMeter.serialNumber}
-              </Typography>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">
+                  Real-time Readings - {selectedMeter.serialNumber}
+                </Typography>
+                <Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSelectedObisCode(INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT)}
+                    color={selectedObisCode === INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT ? 'primary' : 'inherit'}
+                    sx={{ mr: 1 }}
+                  >
+                    Active Energy
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSelectedObisCode(INDIAN_OBIS_CODES.VOLTAGE_L1)}
+                    color={selectedObisCode === INDIAN_OBIS_CODES.VOLTAGE_L1 ? 'primary' : 'inherit'}
+                    sx={{ mr: 1 }}
+                  >
+                    Voltage
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSelectedObisCode(INDIAN_OBIS_CODES.CURRENT_L1)}
+                    color={selectedObisCode === INDIAN_OBIS_CODES.CURRENT_L1 ? 'primary' : 'inherit'}
+                    sx={{ mr: 1 }}
+                  >
+                    Current
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setSelectedObisCode(INDIAN_OBIS_CODES.FREQUENCY)}
+                    color={selectedObisCode === INDIAN_OBIS_CODES.FREQUENCY ? 'primary' : 'inherit'}
+                  >
+                    Frequency
+                  </Button>
+                </Box>
+              </Box>
               <LineChart width={800} height={400} data={readings}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="timestamp" />
-                <YAxis />
-                <Tooltip />
+                <XAxis 
+                  dataKey="timestamp"
+                  tickFormatter={(time) => {
+                    const date = new Date(time);
+                    return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                  }}
+                />
+                <YAxis 
+                  label={{ 
+                    value: selectedObisCode === INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT ? 'kWh' :
+                           selectedObisCode === INDIAN_OBIS_CODES.VOLTAGE_L1 ? 'V' :
+                           selectedObisCode === INDIAN_OBIS_CODES.CURRENT_L1 ? 'A' : 'Hz',
+                    angle: -90,
+                    position: 'insideLeft'
+                  }}
+                />
+                <ChartTooltip
+                  formatter={(value: number) => [
+                    `${value.toFixed(2)} ${
+                      selectedObisCode === INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT ? 'kWh' :
+                      selectedObisCode === INDIAN_OBIS_CODES.VOLTAGE_L1 ? 'V' :
+                      selectedObisCode === INDIAN_OBIS_CODES.CURRENT_L1 ? 'A' : 'Hz'
+                    }`,
+                    'Value'
+                  ]}
+                  labelFormatter={(label) => new Date(label).toLocaleTimeString()}
+                />
                 <Legend />
-                <Line type="monotone" dataKey="value" stroke="#8884d8" />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#8884d8"
+                  name={
+                    selectedObisCode === INDIAN_OBIS_CODES.ACTIVE_ENERGY_IMPORT ? 'Active Energy' :
+                    selectedObisCode === INDIAN_OBIS_CODES.VOLTAGE_L1 ? 'Voltage' :
+                    selectedObisCode === INDIAN_OBIS_CODES.CURRENT_L1 ? 'Current' : 'Frequency'
+                  }
+                  dot={false}
+                  isAnimationActive={false}
+                />
               </LineChart>
             </Item>
           </Grid>
