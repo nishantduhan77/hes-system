@@ -1,0 +1,281 @@
+openapi: 3.0.0
+info:
+  title: DLMS/COSEM Simulator Error Handling API
+  version: 1.0.0
+  description: |
+    API documentation for the DLMS/COSEM Simulator's error handling and recovery system.
+    Provides endpoints for error reporting, recovery management, and system health monitoring.
+
+servers:
+  - url: /api/v1
+    description: Base API path
+
+tags:
+  - name: Errors
+    description: Error management endpoints
+  - name: Recovery
+    description: Recovery procedure management
+  - name: Health
+    description: System health monitoring
+  - name: Notifications
+    description: Error notification management
+
+paths:
+  /errors:
+    post:
+      tags: [Errors]
+      summary: Report a new system error
+      description: Report an error in a system component
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [componentType, errorType, message]
+              properties:
+                componentType:
+                  type: string
+                  enum: [COMMUNICATION, DATA_GENERATION, SECURITY, PERSISTENCE, MONITORING]
+                errorType:
+                  type: string
+                message:
+                  type: string
+                details:
+                  type: object
+      responses:
+        '201':
+          description: Error reported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errorId:
+                    type: string
+                  status:
+                    type: string
+
+    get:
+      tags: [Errors]
+      summary: Get active errors
+      description: Retrieve list of active system errors
+      parameters:
+        - name: componentType
+          in: query
+          schema:
+            type: string
+            enum: [COMMUNICATION, DATA_GENERATION, SECURITY, PERSISTENCE, MONITORING]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+      responses:
+        '200':
+          description: List of active errors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemError'
+
+  /errors/{errorId}:
+    get:
+      tags: [Errors]
+      summary: Get error details
+      parameters:
+        - name: errorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Error details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemError'
+
+  /recovery/procedures:
+    post:
+      tags: [Recovery]
+      summary: Register recovery procedure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryProcedure'
+      responses:
+        '201':
+          description: Recovery procedure registered
+
+    get:
+      tags: [Recovery]
+      summary: Get registered recovery procedures
+      responses:
+        '200':
+          description: List of recovery procedures
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecoveryProcedure'
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Get system health status
+      responses:
+        '200':
+          description: System health status
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                  enum: [HEALTHY, DEGRADED, CRITICAL, RECOVERING, FAILED]
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get notifications
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [ERROR, WARNING, INFO, RECOVERY, STATE_CHANGE]
+        - name: priority
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        - name: acknowledged
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/{notificationId}/acknowledge:
+    post:
+      tags: [Notifications]
+      summary: Acknowledge notification
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [acknowledgedBy]
+              properties:
+                acknowledgedBy:
+                  type: string
+      responses:
+        '200':
+          description: Notification acknowledged
+
+components:
+  schemas:
+    SystemError:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        componentType:
+          type: string
+          enum: [COMMUNICATION, DATA_GENERATION, SECURITY, PERSISTENCE, MONITORING]
+        errorType:
+          type: string
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        message:
+          type: string
+        details:
+          type: object
+        recoveryAttempts:
+          type: integer
+        resolved:
+          type: boolean
+        resolutionTime:
+          type: string
+          format: date-time
+
+    RecoveryProcedure:
+      type: object
+      properties:
+        id:
+          type: string
+        errorType:
+          type: string
+        maxAttempts:
+          type: integer
+        backoffStrategy:
+          type: string
+          enum: [LINEAR, EXPONENTIAL]
+        steps:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              timeout:
+                type: integer
+        fallbackProcedure:
+          type: string
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [ERROR, WARNING, INFO, RECOVERY, STATE_CHANGE]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        title:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        acknowledged:
+          type: boolean
+        acknowledgedAt:
+          type: string
+          format: date-time
+        acknowledgedBy:
+          type: string 

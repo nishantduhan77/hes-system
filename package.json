@@ -1,85 +1,28 @@
 {
   "name": "hes-system",
   "version": "1.0.0",
-  "description": "Head End System for Indian Smart Meters",
-  "dependencies": {
-    "@ant-design/charts": "^1.4.2",
-    "@ant-design/icons": "^4.7.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^5.17.1",
-    "@mui/material": "^5.17.1",
-    "@mui/styles": "^6.4.11",
-    "@mui/x-data-grid": "^6.10.0",
-    "@tanstack/react-query": "4.29.19",
-    "@types/axios": "^0.9.36",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/file-saver": "^2.0.7",
-    "@types/node": "^16.11.7",
-    "@types/react": "^17.0.38",
-    "@types/react-dom": "^17.0.11",
-    "@types/xlsx": "^0.0.35",
-    "antd": "^4.24.0",
-    "axios": "^0.27.2",
-    "cors": "^2.8.5",
-    "dayjs": "^1.11.13",
-    "express": "^4.18.2",
-    "file-saver": "^2.0.5",
-    "notistack": "^3.0.2",
-    "pg": "^8.16.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.2.1",
-    "recharts": "^2.7.2",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
-    "xlsx": "^0.18.5"
-  },
+  "description": "HES System with Meter Data Simulator",
+  "main": "index.js",
   "scripts": {
-    "start": "cd hes-gui && npm start",
-    "server": "ts-node server/index.ts",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "db:up": "docker-compose up -d",
-    "db:down": "docker-compose down",
-    "db:status": "docker-compose ps",
-    "db:logs": "docker-compose logs timescaledb",
-    "db:check": "node scripts/check-db.js",
-    "db:test": "node scripts/testDatabase.js"
+    "start:simulator": "ts-node src/simple-simulator.ts",
+    "start:server": "ts-node src/server.ts",
+    "start:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run start:simulator\" \"npm run start:server\" \"npm run start:frontend\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^5.16.5",
-    "@testing-library/react": "^12.1.5",
-    "@testing-library/user-event": "^13.5.0",
-    "@types/file-saver": "^2.0.5",
-    "@types/jest": "^27.4.0",
-    "@types/node": "^16.18.0",
-    "@types/pg": "^8.15.2",
-    "@types/react": "^17.0.65",
-    "@types/react-dom": "^17.0.20",
-    "@types/recharts": "^1.8.29",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.19",
+    "@types/pg": "^8.11.0",
+    "@types/uuid": "^9.0.8",
     "concurrently": "^8.2.2",
-    "msw": "^2.8.5",
-    "react-scripts": "^5.0.1"
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   }
 }

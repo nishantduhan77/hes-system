@@ -1,49 +1,155 @@
-import { Pool } from 'pg';
+import { Pool, PoolConfig, QueryResult } from 'pg';
+import { MeterReading, MeterAlarm } from '../types/meter';
+import { DatabaseConfig } from '../config/data-injection.config';
 
 export class DatabaseService {
-  private pool: Pool;
+    private pool: Pool;
+    private isConnected: boolean = false;
 
-  constructor() {
-    this.pool = new Pool({
-      user: process.env.DB_USER,
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      password: process.env.DB_PASSWORD,
-      port: parseInt(process.env.DB_PORT || '5432'),
-    });
-  }
+    constructor(config: DatabaseConfig) {
+        this.pool = new Pool({
+            host: config.host,
+            port: config.port,
+            database: config.database,
+            user: config.username,
+            password: config.password,
+            max: config.poolSize,
+            idleTimeoutMillis: config.timeout,
+            ssl: config.ssl
+        });
 
-  async getEvents(startTime?: Date, endTime?: Date, severity?: string) {
-    let query = 'SELECT * FROM meter_events WHERE true';
-    const params: (string | Date)[] = [];
-    let paramCount = 0;
-
-    if (startTime) {
-      paramCount++;
-      query += ` AND time >= $${paramCount}`;
-      params.push(startTime);
+        this.initializeConnection();
     }
 
-    if (endTime) {
-      paramCount++;
-      query += ` AND time <= $${paramCount}`;
-      params.push(endTime);
+    private async initializeConnection(): Promise<void> {
+        try {
+            const client = await this.pool.connect();
+            client.release();
+            this.isConnected = true;
+            console.log('Database connection established successfully');
+        } catch (error) {
+            console.error('Failed to establish database connection:', error);
+            throw error;
+        }
     }
 
-    if (severity !== undefined) {
-      paramCount++;
-      query += ` AND severity = $${paramCount}`;
-      params.push(severity);
+    public async insertMeterReading(reading: MeterReading): Promise<void> {
+        const query = `
+            INSERT INTO meter_readings (
+                meter_id, timestamp, voltage, current, power, 
+                frequency, energy_consumption, connection_status, quality
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `;
+
+        const values = [
+            reading.meterId,
+            reading.timestamp,
+            reading.readings.voltage,
+            reading.readings.current,
+            reading.readings.power,
+            reading.readings.frequency,
+            reading.readings.energyConsumption,
+            reading.status.connectionStatus,
+            reading.status.quality
+        ];
+
+        try {
+            await this.pool.query(query, values);
+        } catch (error) {
+            console.error('Error inserting meter reading:', error);
+            throw error;
+        }
     }
 
-    query += ' ORDER BY time DESC;';
+    public async insertMeterAlarm(alarm: MeterAlarm): Promise<void> {
+        const query = `
+            INSERT INTO meter_alarms (
+                meter_id, timestamp, alarm_type, alarm_message, status
+            ) VALUES ($1, $2, $3, $4, $5)
+        `;
 
-    try {
-      const result = await this.pool.query(query, params);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      throw error;
+        const values = [
+            alarm.meterId,
+            alarm.timestamp,
+            alarm.alarmType,
+            alarm.message,
+            alarm.status
+        ];
+
+        try {
+            await this.pool.query(query, values);
+        } catch (error) {
+            console.error('Error inserting meter alarm:', error);
+            throw error;
+        }
     }
-  }
+
+    public async insertBatchReadings(readings: MeterReading[]): Promise<void> {
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            for (const reading of readings) {
+                await this.insertMeterReading(reading);
+            }
+
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error inserting batch readings:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    public async getMeterReadings(meterId: string, startTime: Date, endTime: Date): Promise<MeterReading[]> {
+        const query = `
+            SELECT * FROM meter_readings 
+            WHERE meter_id = $1 
+            AND timestamp BETWEEN $2 AND $3 
+            ORDER BY timestamp DESC
+        `;
+
+        try {
+            const result = await this.pool.query(query, [meterId, startTime, endTime]);
+            return result.rows.map(this.mapRowToMeterReading);
+        } catch (error) {
+            console.error('Error fetching meter readings:', error);
+            throw error;
+        }
+    }
+
+    private mapRowToMeterReading(row: any): MeterReading {
+        return {
+            meterId: row.meter_id,
+            timestamp: row.timestamp,
+            readings: {
+                voltage: row.voltage,
+                current: row.current,
+                power: row.power,
+                frequency: row.frequency,
+                energyConsumption: row.energy_consumption
+            },
+            status: {
+                connectionStatus: row.connection_status,
+                quality: row.quality
+            }
+        };
+    }
+
+    public async disconnect(): Promise<void> {
+        await this.pool.end();
+        this.isConnected = false;
+    }
+
+    public async reconnect(): Promise<void> {
+        if (!this.isConnected) {
+            await this.initializeConnection();
+        }
+    }
+
+    public isConnectionActive(): boolean {
+        return this.isConnected;
+    }
 } 

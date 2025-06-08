@@ -24,6 +24,7 @@ public class MeterSimulator {
         log.info("Added simulated meter: {}", meter.getSerialNumber());
     }
 
+    
     public List<MeterReading> generateReadings() {
         List<MeterReading> readings = new ArrayList<>();
         Instant now = Instant.now();

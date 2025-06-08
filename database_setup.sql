@@ -8,28 +8,27 @@ CREATE DATABASE hes_system;
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- Create meters table
-CREATE TABLE meters (
+CREATE TABLE IF NOT EXISTS meters (
     meter_id UUID PRIMARY KEY,
-    serial_number VARCHAR(50) UNIQUE,
-    manufacturer VARCHAR(100),
-    model VARCHAR(100),
-    installation_date TIMESTAMPTZ,
+    serial_number VARCHAR(50) UNIQUE NOT NULL,
+    manufacturer VARCHAR(100) NOT NULL,
+    model VARCHAR(100) NOT NULL,
+    installation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     firmware_version VARCHAR(50),
-    status VARCHAR(20),
-    last_communication TIMESTAMPTZ
+    status VARCHAR(20) NOT NULL DEFAULT 'DISCONNECTED',
+    last_communication TIMESTAMP
 );
 
 -- Create power_readings table
-CREATE TABLE power_readings (
-    meter_id UUID NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    active_power_import DOUBLE PRECISION,
-    active_power_export DOUBLE PRECISION,
-    voltage_r_phase DOUBLE PRECISION,
-    current_r_phase DOUBLE PRECISION,
-    quality_code INTEGER,
-    PRIMARY KEY (meter_id, timestamp),
-    FOREIGN KEY (meter_id) REFERENCES meters(meter_id)
+CREATE TABLE IF NOT EXISTS power_readings (
+    reading_id SERIAL PRIMARY KEY,
+    meter_id UUID REFERENCES meters(meter_id),
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    active_power_import FLOAT,
+    active_power_export FLOAT,
+    voltage_r_phase FLOAT,
+    current_r_phase FLOAT,
+    quality_code INTEGER DEFAULT 0
 );
 
 -- Create hypertable for power_readings
@@ -59,23 +58,19 @@ GROUP BY m.meter_id, m.serial_number;
 -- Create meter_health_status view
 CREATE OR REPLACE VIEW meter_health_status AS
 SELECT 
+    m.meter_id,
     m.serial_number,
     m.status,
     m.last_communication,
     CASE 
-        WHEN m.last_communication < NOW() - INTERVAL '24 hours' THEN 'Critical'
-        WHEN m.last_communication < NOW() - INTERVAL '6 hours' THEN 'Warning'
+        WHEN m.status = 'DISCONNECTED' THEN 'Offline'
+        WHEN NOW() - m.last_communication > INTERVAL '5 minutes' THEN 'Communication Error'
         ELSE 'Good'
-    END as communication_status,
-    COUNT(pr.*) FILTER (WHERE pr.timestamp >= NOW() - INTERVAL '24 hours') as readings_last_24h,
-    COUNT(pr.*) FILTER (WHERE pr.quality_code != 0) as error_readings_24h
-FROM meters m
-LEFT JOIN power_readings pr 
-    ON m.meter_id = pr.meter_id
-    AND pr.timestamp >= NOW() - INTERVAL '24 hours'
-GROUP BY m.meter_id, m.serial_number, m.status, m.last_communication;
+    END as communication_status
+FROM meters m;
 
 -- Add indexes for better query performance
-CREATE INDEX idx_power_readings_meter_timestamp ON power_readings(meter_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_power_readings_timestamp ON power_readings(timestamp);
+CREATE INDEX IF NOT EXISTS idx_power_readings_meter_id ON power_readings(meter_id);
 CREATE INDEX idx_meters_serial ON meters(serial_number);
 CREATE INDEX idx_meters_status ON meters(status); 
