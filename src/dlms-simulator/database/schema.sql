@@ -409,3 +409,37 @@ SELECT
 FROM information_schema.tables 
 WHERE table_schema = 'public'
 ORDER BY table_type, table_name; 
+
+   SELECT table_name, table_type 
+   FROM information_schema.tables 
+   WHERE table_schema = 'public'
+   ORDER BY table_type, table_name;
+-- Check how many meters exist and their status
+SELECT 
+    status,
+    COUNT(*) as meter_count,
+    MIN(last_communication) as earliest_communication,
+    MAX(last_communication) as latest_communication
+FROM meters
+GROUP BY status;
+
+-- View latest 5 meters
+-- Count of readings per meter in last 24 hours
+SELECT 
+    m.serial_number,
+    COUNT(*) as reading_count,
+    MIN(pr.timestamp) as first_reading,
+    MAX(pr.timestamp) as last_reading,
+    AVG(pr.active_power_import) as avg_power_import,
+    AVG(pr.voltage_r_phase) as avg_voltage
+FROM power_readings pr
+JOIN meters m ON pr.meter_id = m.meter_id
+WHERE pr.timestamp >= NOW() - INTERVAL '24 hours'
+GROUP BY m.serial_number
+ORDER BY reading_count DESC;
+
+-- Latest 5 readings with meter details
+-- View health status of all meters
+SELECT * FROM meter_health_status;
+
+select * from meters;

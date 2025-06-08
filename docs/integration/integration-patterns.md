@@ -1,4 +1,5 @@
-# Error Handling and Recovery System Integration Patterns
+
+ # Error Handling and Recovery System Integration Patterns
 
 This guide describes common integration patterns and best practices for integrating with the DLMS/COSEM simulator's error handling and recovery system.
 
