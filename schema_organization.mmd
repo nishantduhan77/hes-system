@@ -1,0 +1,45 @@
+flowchart TD
+    subgraph Public["public schema"]
+        M[meters]
+        MR[meter_readings]
+        ME[meter_events]
+    end
+
+    subgraph Cache["_timescaledb_cache schema"]
+        EM[energy_measurements]
+        PR[power_readings]
+        VM[voltage_measurements]
+        CM[current_measurements]
+        IP[instant_profile]
+        DLP[daily_load_profile]
+        BLP[block_load_profile]
+        BP[billing_profile]
+    end
+
+    subgraph System["System Schemas"]
+        direction LR
+        subgraph Catalog["_timescaledb_catalog"]
+            CH[chunk]
+            HT[hypertable]
+            DM[dimension]
+        end
+        subgraph Config["_timescaledb_config"]
+            BJ[bgw_job]
+        end
+        subgraph Info["timescaledb_information"]
+            HTS[hypertables]
+            CHS[chunks]
+            JBS[jobs]
+        end
+    end
+
+    M --> EM
+    M --> PR
+    M --> VM
+    M --> CM
+    M --> IP
+    M --> DLP
+    M --> BLP
+    M --> BP
+    M --> MR
+    M --> ME 

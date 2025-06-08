@@ -1,0 +1,41 @@
+erDiagram
+    meters ||--o{ meter_readings : has
+    meters ||--o{ meter_events : generates
+    meters ||--o{ energy_measurements : records
+    meters ||--o{ power_readings : records
+    meters ||--o{ voltage_measurements : records
+    meters ||--o{ current_measurements : records
+    meters ||--o{ instant_profile : has
+    meters ||--o{ daily_load_profile : has
+    meters ||--o{ block_load_profile : has
+    meters ||--o{ billing_profile : has
+
+    meters {
+        uuid id PK
+        string meter_number
+        string meter_type
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    meter_readings {
+        uuid id PK
+        uuid meter_id FK
+        float value
+        timestamp reading_time
+    }
+
+    meter_events {
+        uuid id PK
+        uuid meter_id FK
+        string event_type
+        timestamp event_time
+    }
+
+    energy_measurements {
+        uuid id PK
+        uuid meter_id FK
+        float active_energy
+        float reactive_energy
+        timestamp measured_at
+    } 

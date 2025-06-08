@@ -1,0 +1,131 @@
+---
+title: HES Database Structure
+---
+erDiagram
+    meters ||--o{ meter_readings : has
+    meters ||--o{ meter_events : generates
+    meters ||--o{ energy_measurements : records
+    meters ||--o{ power_readings : records
+    meters ||--o{ voltage_measurements : records
+    meters ||--o{ current_measurements : records
+    meters ||--o{ instant_profile : has
+    meters ||--o{ daily_load_profile : has
+    meters ||--o{ block_load_profile : has
+    meters ||--o{ billing_profile : has
+
+    meters {
+        uuid id PK
+        string meter_number
+        string meter_type
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    meter_readings {
+        uuid id PK
+        uuid meter_id FK
+        float value
+        timestamp reading_time
+    }
+
+    meter_events {
+        uuid id PK
+        uuid meter_id FK
+        string event_type
+        timestamp event_time
+    }
+
+    energy_measurements {
+        uuid id PK
+        uuid meter_id FK
+        float active_energy
+        float reactive_energy
+        timestamp measured_at
+    }
+
+---
+title: Push Notification System
+---
+erDiagram
+    push_schedules ||--|{ schedule_entries : contains
+    push_schedules ||--o{ push_history : generates
+    push_objects ||--o{ push_history : tracked_in
+    push_setups ||--o{ push_history : configured_in
+
+    push_schedules {
+        uuid id PK
+        string name
+        string schedule_type
+        boolean is_active
+    }
+
+    schedule_entries {
+        uuid id PK
+        uuid schedule_id FK
+        timestamp execution_time
+        string status
+    }
+
+    push_history {
+        uuid id PK
+        uuid schedule_id FK
+        uuid object_id FK
+        uuid setup_id FK
+        timestamp pushed_at
+        string status
+    }
+
+    push_objects {
+        uuid id PK
+        string object_type
+        json configuration
+    }
+
+---
+title: Schema Organization
+---
+flowchart TD
+    subgraph Public["public schema"]
+        M[meters]
+        MR[meter_readings]
+        ME[meter_events]
+    end
+
+    subgraph Cache["_timescaledb_cache schema"]
+        EM[energy_measurements]
+        PR[power_readings]
+        VM[voltage_measurements]
+        CM[current_measurements]
+        IP[instant_profile]
+        DLP[daily_load_profile]
+        BLP[block_load_profile]
+        BP[billing_profile]
+    end
+
+    subgraph System["System Schemas"]
+        direction LR
+        subgraph Catalog["_timescaledb_catalog"]
+            CH[chunk]
+            HT[hypertable]
+            DM[dimension]
+        end
+        subgraph Config["_timescaledb_config"]
+            BJ[bgw_job]
+        end
+        subgraph Info["timescaledb_information"]
+            HTS[hypertables]
+            CHS[chunks]
+            JBS[jobs]
+        end
+    end
+
+    M --> EM
+    M --> PR
+    M --> VM
+    M --> CM
+    M --> IP
+    M --> DLP
+    M --> BLP
+    M --> BP
+    M --> MR
+    M --> ME 

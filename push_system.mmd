@@ -1,0 +1,34 @@
+erDiagram
+    push_schedules ||--|{ schedule_entries : contains
+    push_schedules ||--o{ push_history : generates
+    push_objects ||--o{ push_history : tracked_in
+    push_setups ||--o{ push_history : configured_in
+
+    push_schedules {
+        uuid id PK
+        string name
+        string schedule_type
+        boolean is_active
+    }
+
+    schedule_entries {
+        uuid id PK
+        uuid schedule_id FK
+        timestamp execution_time
+        string status
+    }
+
+    push_history {
+        uuid id PK
+        uuid schedule_id FK
+        uuid object_id FK
+        uuid setup_id FK
+        timestamp pushed_at
+        string status
+    }
+
+    push_objects {
+        uuid id PK
+        string object_type
+        json configuration
+    } 
