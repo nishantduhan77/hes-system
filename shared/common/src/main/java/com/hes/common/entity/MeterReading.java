@@ -10,14 +10,18 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "meter_readings")
-@EqualsAndHashCode(of = {"meterId", "timestamp", "readingType"})
+@EqualsAndHashCode(of = {"meterId", "hesTimestamp", "readingType"})
 public class MeterReading {
     @Id
     @Column(name = "meter_id")
     private UUID meterId;
 
     @Id
-    private Instant timestamp;
+    @Column(name = "hes_timestamp")
+    private Instant hesTimestamp;
+
+    @Column(name = "rtc_timestamp")
+    private Instant rtcTimestamp;
 
     @Id
     @Column(name = "reading_type")
@@ -27,11 +31,44 @@ public class MeterReading {
     @Column(nullable = false)
     private Double value;
 
+    @Column(name = "original_value")
+    private Double originalValue;
+
+    @Column(name = "scaling_factor")
+    private Integer scalingFactor;
+
     @Column(nullable = false)
     private Integer quality = 192; // Default GOOD quality
 
     @Column(nullable = false)
     private String unit;
+
+    @Column(name = "source")
+    @Enumerated(EnumType.STRING)
+    private ReadingSource source = ReadingSource.NORMAL_READ;
+
+    @Column(name = "capture_period")
+    private Integer capturePeriod;
+
+    @Column(name = "validation_status")
+    @Enumerated(EnumType.STRING)
+    private ValidationStatus validationStatus = ValidationStatus.UNVALIDATED;
+
+    @Column(name = "validation_flags")
+    private Integer[] validationFlags;
+
+    @Column(name = "communication_status")
+    @Enumerated(EnumType.STRING)
+    private CommunicationStatus communicationStatus;
+
+    @Column(name = "retry_count")
+    private Integer retryCount = 0;
+
+    @Column(name = "meter_program_id")
+    private String meterProgramId;
+
+    @Column(name = "channel_id")
+    private String channelId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -53,6 +90,29 @@ public class MeterReading {
         CURRENT_L3,
         FREQUENCY,
         POWER_FACTOR
+    }
+
+    public enum ReadingSource {
+        NORMAL_READ,
+        AUTO_READ,
+        MANUAL_READ,
+        ESTIMATED,
+        CALCULATED
+    }
+
+    public enum ValidationStatus {
+        UNVALIDATED,
+        VALID,
+        INVALID,
+        ESTIMATED,
+        MANUALLY_VALIDATED
+    }
+
+    public enum CommunicationStatus {
+        SUCCESS,
+        TIMEOUT,
+        ERROR,
+        PARTIAL
     }
 
     public enum Unit {

@@ -60,38 +60,48 @@ export class DatabaseService {
   // Meter Readings Operations
   public async addMeterReading(
     meterId: string,
-    timestamp: Date,
+    hesTimestamp: Date,
+    rtcTimestamp: Date,
     obisCode: string,
     value: number,
     unit: string,
     qualityCode: number
   ): Promise<void> {
     const query = `
-      INSERT INTO meter_readings (time, meter_id, obis_code, value, unit, quality_code)
-      VALUES ($1, $2, $3, $4, $5, $6);
+      INSERT INTO meter_readings (meter_id, hes_timestamp, rtc_timestamp, obis_code, value, unit, quality_code)
+      VALUES ($1, $2, $3, $4, $5, $6, $7);
     `;
-    await this.pool.query(query, [timestamp, meterId, obisCode, value, unit, qualityCode]);
+    await this.pool.query(query, [meterId, hesTimestamp, rtcTimestamp, obisCode, value, unit, qualityCode]);
   }
 
   public async getMeterReadings(
     meterId: string,
     startTime: Date,
     endTime: Date,
-    obisCode?: string
+    readingType?: string
   ): Promise<any[]> {
-    let query = `
-      SELECT time, obis_code, value, unit, quality_code
-      FROM meter_readings
-      WHERE meter_id = $1 AND time BETWEEN $2 AND $3
-    `;
     const params = [meterId, startTime, endTime];
+    let query = `
+      SELECT 
+        meter_id,
+        hes_timestamp,
+        rtc_timestamp,
+        reading_type,
+        value,
+        unit,
+        quality_code
+      FROM meter_readings
+      WHERE meter_id = $1
+        AND hes_timestamp BETWEEN $2 AND $3
+    `;
 
-    if (obisCode) {
-      query += ' AND obis_code = $4';
-      params.push(obisCode);
+    if (readingType) {
+      query += ` AND reading_type = $4`;
+      params.push(readingType);
     }
 
-    query += ' ORDER BY time DESC;';
+    query += ` ORDER BY hes_timestamp DESC`;
+
     const result = await this.pool.query(query, params);
     return result.rows;
   }
