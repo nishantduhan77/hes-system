@@ -7,6 +7,7 @@
         <groupId>com.hes</groupId>
         <artifactId>hes-system</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>hes-common</artifactId>
@@ -28,10 +29,6 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.timescale</groupId>
-            <artifactId>timescaledb-jdbc</artifactId>
         </dependency>
 
         <!-- Utilities -->

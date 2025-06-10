@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: hes_timescaledb
+    environment:
+      - POSTGRES_USER=hes_user
+      - POSTGRES_PASSWORD=hes_password
+      - POSTGRES_DB=hes
+      - TIMESCALEDB_TELEMETRY=off
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: postgres -c max_connections=200
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hes_user -d hes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hes_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hes_pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - timescaledb
+    networks:
+      - hes_network
+
+volumes:
+  timescaledb_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  hes_network:
+    driver: bridge 

@@ -20,11 +20,11 @@
     <description>Head End System for Smart Meter Management</description>
 
     <modules>
-        <module>hes-core</module>
-        <module>hes-data-collector</module>
-        <module>hes-stream-processor</module>
-        <module>hes-api</module>
-        <module>hes-common</module>
+        <module>shared/common</module>
+        <module>apps/collector</module>
+        <module>apps/console</module>
+        <module>apps/gui</module>
+        <module>apps/microservices</module>
     </modules>
 
     <properties>
@@ -33,8 +33,6 @@
         <spring-cloud.version>2023.0.0</spring-cloud.version>
         <kafka.version>3.6.1</kafka.version>
         <flink.version>1.18.1</flink.version>
-        <timescaledb-jdbc.version>0.5.0</timescaledb-jdbc.version>
-        <dlms.version>1.0.0</dlms.version>
         <junit-jupiter.version>5.10.2</junit-jupiter.version>
         <testcontainers.version>1.19.6</testcontainers.version>
         <lombok.version>1.18.30</lombok.version>
@@ -74,13 +72,6 @@
                 <groupId>org.apache.flink</groupId>
                 <artifactId>flink-connector-kafka</artifactId>
                 <version>${flink.version}</version>
-            </dependency>
-
-            <!-- TimescaleDB -->
-            <dependency>
-                <groupId>com.timescale</groupId>
-                <artifactId>timescaledb-jdbc</artifactId>
-                <version>${timescaledb-jdbc.version}</version>
             </dependency>
 
             <!-- Testing -->

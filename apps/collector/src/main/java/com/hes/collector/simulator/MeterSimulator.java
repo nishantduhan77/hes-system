@@ -1,16 +1,18 @@
 package com.hes.collector.simulator;
 
-import com.hes.common.entity.Meter;
-import com.hes.common.entity.MeterReading;
+import com.hes.data.entities.*;
+import com.hes.common.repository.*;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
 
 @Slf4j
 @Data
@@ -18,136 +20,134 @@ import java.util.UUID;
 public class MeterSimulator {
     private final Random random = new Random();
     private final List<SimulatedMeter> simulatedMeters = new ArrayList<>();
+    private final JdbcTemplate jdbcTemplate;
+    private final MeterRepository meterRepository;
+
+    public MeterSimulator(JdbcTemplate jdbcTemplate, MeterRepository meterRepository) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.meterRepository = meterRepository;
+        loadMeters();
+    }
+
+    private void loadMeters() {
+        List<Meter> meters = meterRepository.findAll();
+        for (Meter meter : meters) {
+            addMeter(meter);
+        }
+        log.info("Loaded {} meters for simulation", simulatedMeters.size());
+    }
 
     public void addMeter(Meter meter) {
         simulatedMeters.add(new SimulatedMeter(meter));
         log.info("Added simulated meter: {}", meter.getSerialNumber());
     }
 
-    
+    @Scheduled(fixedRate = 30000) // Generate readings every 30 seconds
+    public void generateAndSaveReadings() {
+        List<MeterReading> readings = generateReadings();
+        log.info("Generated {} readings", readings.size());
+    }
+
     public List<MeterReading> generateReadings() {
         List<MeterReading> readings = new ArrayList<>();
         Instant now = Instant.now();
 
         for (SimulatedMeter simMeter : simulatedMeters) {
-            // Generate active energy import
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.ACTIVE_ENERGY_IMPORT,
-                simMeter.generateActiveEnergyImport(),
-                MeterReading.Unit.KWH
-            ));
-
-            // Generate voltage readings for each phase
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.VOLTAGE_L1,
-                simMeter.generateVoltage(),
-                MeterReading.Unit.V
-            ));
-
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.VOLTAGE_L2,
-                simMeter.generateVoltage(),
-                MeterReading.Unit.V
-            ));
-
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.VOLTAGE_L3,
-                simMeter.generateVoltage(),
-                MeterReading.Unit.V
-            ));
-
-            // Generate current readings for each phase
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.CURRENT_L1,
-                simMeter.generateCurrent(),
-                MeterReading.Unit.A
-            ));
-
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.CURRENT_L2,
-                simMeter.generateCurrent(),
-                MeterReading.Unit.A
-            ));
-
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.CURRENT_L3,
-                simMeter.generateCurrent(),
-                MeterReading.Unit.A
-            ));
-
-            // Generate frequency
-            readings.add(createReading(
-                simMeter.getMeter().getId(),
-                now,
-                MeterReading.ReadingType.FREQUENCY,
-                simMeter.generateFrequency(),
-                MeterReading.Unit.HZ
-            ));
+            // Generate and save different types of readings
+            generateAndSaveInstantaneousReadings(simMeter, now);
+            generateAndSaveBlockLoadProfile(simMeter, now);
+            generateAndSaveDailyLoadProfile(simMeter, now);
+            generateAndSaveBillingProfile(simMeter, now);
         }
 
         return readings;
     }
 
-    private MeterReading createReading(UUID meterId, Instant timestamp,
-                                     MeterReading.ReadingType type,
-                                     double value, MeterReading.Unit unit) {
-        MeterReading reading = new MeterReading();
-        reading.setMeterId(meterId);
-        reading.setTimestamp(timestamp);
-        reading.setReadingType(type);
-        reading.setValue(value);
-        reading.setUnit(unit.getSymbol());
-        return reading;
+    private void generateAndSaveInstantaneousReadings(SimulatedMeter simMeter, Instant now) {
+        // Create instantaneous profile
+        String sql = "INSERT INTO instantaneous_profiles (id, meter_id, capture_time, power_factor, frequency, " +
+                    "voltage_r, voltage_y, voltage_b, current_r, current_y, current_b, active_power_import, " +
+                    "active_power_export, reactive_power_import, reactive_power_export) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        UUID profileId = UUID.randomUUID();
+        jdbcTemplate.update(sql,
+            profileId,
+            simMeter.getMeter().getId(),
+            Timestamp.from(now),
+            simMeter.generatePowerFactor(),
+            simMeter.generateFrequency(),
+            simMeter.generateVoltage(),
+            simMeter.generateVoltage(),
+            simMeter.generateVoltage(),
+            simMeter.generateCurrent(),
+            simMeter.generateCurrent(),
+            simMeter.generateCurrent(),
+            simMeter.generateActivePowerImport(),
+            simMeter.generateActivePowerExport(),
+            simMeter.generateReactivePower(),
+            simMeter.generateReactivePower()
+        );
     }
 
-    @Data
-    private class SimulatedMeter {
-        private final Meter meter;
-        private double lastActiveEnergyImport = 0.0;
-        private static final double BASE_LOAD = 5.0; // Base load in kW
-        private static final double LOAD_VARIATION = 2.0; // Load variation in kW
+    private void generateAndSaveBlockLoadProfile(SimulatedMeter simMeter, Instant now) {
+        String sql = "INSERT INTO block_load_profiles (id, meter_id, capture_time, active_energy_import, " +
+                    "active_energy_export, reactive_energy_import, reactive_energy_export, interval_minutes) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
-        public SimulatedMeter(Meter meter) {
-            this.meter = meter;
-        }
+        UUID profileId = UUID.randomUUID();
+        jdbcTemplate.update(sql,
+            profileId,
+            simMeter.getMeter().getId(),
+            Timestamp.from(now),
+            simMeter.generateActivePowerImport() * 0.25, // 15-min energy
+            simMeter.generateActivePowerExport() * 0.25,
+            simMeter.generateReactivePower() * 0.25,
+            simMeter.generateReactivePower() * 0.25,
+            15 // 15-minute intervals
+        );
+    }
 
-        public double generateActiveEnergyImport() {
-            // Generate realistic consumption pattern
-            double loadKW = BASE_LOAD + (random.nextDouble() * LOAD_VARIATION);
-            // Convert power to energy for 30-minute interval
-            double energyIncrement = loadKW * 0.5; // kWh for 30 minutes
-            lastActiveEnergyImport += energyIncrement;
-            return lastActiveEnergyImport;
-        }
+    private void generateAndSaveDailyLoadProfile(SimulatedMeter simMeter, Instant now) {
+        String sql = "INSERT INTO daily_load_profiles (id, meter_id, capture_time, active_energy_import, " +
+                    "active_energy_export, reactive_energy_import, reactive_energy_export) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        public double generateVoltage() {
-            // Generate voltage with small variations around 230V
-            return 230.0 + (random.nextGaussian() * 2.0);
-        }
+        UUID profileId = UUID.randomUUID();
+        jdbcTemplate.update(sql,
+            profileId,
+            simMeter.getMeter().getId(),
+            Timestamp.from(now),
+            simMeter.generateActivePowerImport() * 24, // Daily energy
+            simMeter.generateActivePowerExport() * 24,
+            simMeter.generateReactivePower() * 24,
+            simMeter.generateReactivePower() * 24
+        );
+    }
 
-        public double generateCurrent() {
-            // Generate current based on power and voltage
-            double powerKW = BASE_LOAD + (random.nextDouble() * LOAD_VARIATION);
-            return (powerKW * 1000) / (230.0 * Math.sqrt(3)); // Convert to Amps
-        }
+    private void generateAndSaveBillingProfile(SimulatedMeter simMeter, Instant now) {
+        // Generate billing profile once per day at midnight
+        LocalDateTime localNow = LocalDateTime.ofInstant(now, ZoneId.systemDefault());
+        if (localNow.getHour() == 0 && localNow.getMinute() == 0) {
+            String sql = "INSERT INTO billing_profiles (id, meter_id, capture_time, active_energy_import_t1, " +
+                        "active_energy_import_t2, active_energy_export_t1, active_energy_export_t2, " +
+                        "reactive_energy_import_t1, reactive_energy_import_t2, maximum_demand_t1, maximum_demand_t2) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        public double generateFrequency() {
-            // Generate frequency with small variations around 50Hz
-            return 50.0 + (random.nextGaussian() * 0.1);
+            UUID profileId = UUID.randomUUID();
+            jdbcTemplate.update(sql,
+                profileId,
+                simMeter.getMeter().getId(),
+                Timestamp.from(now),
+                simMeter.generateActivePowerImport() * 24 * 30, // Monthly energy T1
+                simMeter.generateActivePowerImport() * 24 * 30 * 0.8, // Monthly energy T2
+                simMeter.generateActivePowerExport() * 24 * 30,
+                simMeter.generateActivePowerExport() * 24 * 30 * 0.8,
+                simMeter.generateReactivePower() * 24 * 30,
+                simMeter.generateReactivePower() * 24 * 30 * 0.8,
+                simMeter.generateActivePowerImport() * 1.5, // Max demand T1
+                simMeter.generateActivePowerImport() * 1.2  // Max demand T2
+            );
         }
     }
-} 
+}

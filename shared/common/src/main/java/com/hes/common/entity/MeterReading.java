@@ -2,46 +2,49 @@ package com.hes.common.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
 @Data
+@NoArgsConstructor
 @Entity
 @Table(name = "meter_readings")
-@EqualsAndHashCode(of = {"meterId", "hesTimestamp", "readingType"})
 public class MeterReading {
     @Id
     @Column(name = "meter_id")
     private UUID meterId;
 
-    @Id
     @Column(name = "hes_timestamp")
     private Instant hesTimestamp;
 
     @Column(name = "rtc_timestamp")
     private Instant rtcTimestamp;
 
-    @Id
     @Column(name = "reading_type")
     @Enumerated(EnumType.STRING)
     private ReadingType readingType;
 
-    @Column(nullable = false)
+    @Column(name = "value")
     private Double value;
+
+    @Column(name = "quality")
+    private Integer quality;
+
+    @Column(name = "unit")
+    private String unit;
+
+    @Column(name = "communication_status")
+    @Enumerated(EnumType.STRING)
+    private CommunicationStatus communicationStatus;
 
     @Column(name = "original_value")
     private Double originalValue;
 
     @Column(name = "scaling_factor")
     private Integer scalingFactor;
-
-    @Column(nullable = false)
-    private Integer quality = 192; // Default GOOD quality
-
-    @Column(nullable = false)
-    private String unit;
 
     @Column(name = "source")
     @Enumerated(EnumType.STRING)
@@ -57,10 +60,6 @@ public class MeterReading {
     @Column(name = "validation_flags")
     private Integer[] validationFlags;
 
-    @Column(name = "communication_status")
-    @Enumerated(EnumType.STRING)
-    private CommunicationStatus communicationStatus;
-
     @Column(name = "retry_count")
     private Integer retryCount = 0;
 
@@ -74,10 +73,6 @@ public class MeterReading {
     private Instant createdAt = Instant.now();
 
     public enum ReadingType {
-        ACTIVE_ENERGY_IMPORT,
-        ACTIVE_ENERGY_EXPORT,
-        REACTIVE_ENERGY_IMPORT,
-        REACTIVE_ENERGY_EXPORT,
         ACTIVE_POWER_IMPORT,
         ACTIVE_POWER_EXPORT,
         REACTIVE_POWER_IMPORT,
@@ -88,8 +83,8 @@ public class MeterReading {
         CURRENT_L1,
         CURRENT_L2,
         CURRENT_L3,
-        FREQUENCY,
-        POWER_FACTOR
+        POWER_FACTOR,
+        FREQUENCY
     }
 
     public enum ReadingSource {
@@ -116,10 +111,8 @@ public class MeterReading {
     }
 
     public enum Unit {
-        KWH("kWh"),
-        KVARH("kVARh"),
         KW("kW"),
-        KVAR("kVAR"),
+        KVAR("kVAr"),
         V("V"),
         A("A"),
         HZ("Hz"),

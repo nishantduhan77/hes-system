@@ -156,4 +156,31 @@ export class ObisCode {
     public static readonly CURRENT_L1 = new ObisCode(1, 0, 31, 7, 0, 255);
     public static readonly CURRENT_L2 = new ObisCode(1, 0, 51, 7, 0, 255);
     public static readonly CURRENT_L3 = new ObisCode(1, 0, 71, 7, 0, 255);
+
+    // Load Profiles
+    public static readonly DAILY_LOAD_PROFILE = new ObisCode(1, 0, 99, 2, 0, 255);
+    public static readonly BLOCK_LOAD_PROFILE = new ObisCode(1, 0, 99, 1, 0, 255);
+    public static readonly BILLING_PROFILE = new ObisCode(1, 0, 98, 1, 0, 255);
+    
+    // Instantaneous Parameters
+    public static readonly POWER_FACTOR_TOTAL = new ObisCode(1, 0, 13, 7, 0, 255);
+    public static readonly POWER_FACTOR_L1 = new ObisCode(1, 0, 33, 7, 0, 255);
+    public static readonly POWER_FACTOR_L2 = new ObisCode(1, 0, 53, 7, 0, 255);
+    public static readonly POWER_FACTOR_L3 = new ObisCode(1, 0, 73, 7, 0, 255);
+    public static readonly FREQUENCY = new ObisCode(1, 0, 14, 7, 0, 255);
+    
+    // Event Categories
+    public static readonly EVENT_VOLTAGE_RELATED = new ObisCode(0, 0, 96, 11, 0, 255);
+    public static readonly EVENT_CURRENT_RELATED = new ObisCode(0, 0, 96, 11, 1, 255);
+    public static readonly EVENT_POWER_RELATED = new ObisCode(0, 0, 96, 11, 2, 255);
+    public static readonly EVENT_TRANSACTION_RELATED = new ObisCode(0, 0, 96, 11, 3, 255);
+    public static readonly EVENT_OTHERS = new ObisCode(0, 0, 96, 11, 4, 255);
+    
+    // Billing Related
+    public static readonly ACTIVE_ENERGY_TARIFF_1 = new ObisCode(1, 0, 1, 8, 1, 255);
+    public static readonly ACTIVE_ENERGY_TARIFF_2 = new ObisCode(1, 0, 1, 8, 2, 255);
+    public static readonly ACTIVE_ENERGY_TARIFF_3 = new ObisCode(1, 0, 1, 8, 3, 255);
+    public static readonly ACTIVE_ENERGY_TARIFF_4 = new ObisCode(1, 0, 1, 8, 4, 255);
+    public static readonly MAX_DEMAND_TARIFF_1 = new ObisCode(1, 0, 1, 6, 1, 255);
+    public static readonly MAX_DEMAND_TARIFF_2 = new ObisCode(1, 0, 1, 6, 2, 255);
 } 

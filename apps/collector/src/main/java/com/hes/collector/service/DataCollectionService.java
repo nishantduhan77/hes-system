@@ -1,8 +1,8 @@
 package com.hes.collector.service;
 
 import com.hes.collector.simulator.MeterSimulator;
-import com.hes.common.entity.Meter;
-import com.hes.common.entity.MeterReading;
+import com.hes.data.entities.Meter;
+import com.hes.data.entities.MeterReading;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -38,7 +38,7 @@ public class DataCollectionService {
 
     private void publishReadings(List<MeterReading> readings) {
         for (MeterReading reading : readings) {
-            String key = reading.getMeterId().toString() + "_" + reading.getReadingType();
+            String key = reading.getId().toString() + "_" + reading.getObisCode();
             kafkaTemplate.send(TOPIC, key, reading)
                 .whenComplete((result, ex) -> {
                     if (ex != null) {

@@ -21,6 +21,9 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
+    @Value("${spring.application.name}")
+    private String applicationName;
+
     @Bean
     public ProducerFactory<String, MeterReading> producerFactory() {
         Map<String, Object> configProps = new HashMap<>();
@@ -34,8 +37,11 @@ public class KafkaConfig {
         configProps.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 33554432);
         configProps.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "snappy");
         configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        configProps.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, applicationName + "-" + System.currentTimeMillis());
 
-        return new DefaultKafkaProducerFactory<>(configProps);
+        DefaultKafkaProducerFactory<String, MeterReading> factory = new DefaultKafkaProducerFactory<>(configProps);
+        factory.setTransactionIdPrefix("tx-");
+        return factory;
     }
 
     @Bean

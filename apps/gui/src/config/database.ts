@@ -1,7 +1,7 @@
 export const dbConfig = {
   host: 'localhost',
   port: 5433,
-  database: 'hes_db',
+  database: 'hes',
   user: 'hes_user',
   password: 'hes_password',
   max: 20, // Maximum number of clients in the pool
