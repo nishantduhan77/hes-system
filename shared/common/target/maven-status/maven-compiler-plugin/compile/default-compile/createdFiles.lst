@@ -4,7 +4,6 @@ com\hes\common\entity\MeterReading$CommunicationStatus.class
 com\hes\data\entities\events\EventLog.class
 com\hes\data\entities\MeterReading.class
 com\hes\common\entity\oracle\OracleMeterReading.class
-com\hes\common\entity\Meter.class
 com\hes\common\entity\MeterGroup.class
 com\hes\common\entity\MeterReading$ReadingType.class
 com\hes\data\entities\profiles\InstantaneousProfile.class

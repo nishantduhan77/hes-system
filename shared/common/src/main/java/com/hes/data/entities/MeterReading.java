@@ -8,37 +8,39 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Data
-@Entity
+@Entity(name = "DataMeterReading")
 @Table(name = "meter_readings")
 @EqualsAndHashCode(callSuper = true)
 public class MeterReading extends BaseEntity {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(name = "reading_id")
+    @Column(name = "id")
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "meter_id", nullable = false)
+    @JoinColumn(name = "meter_id")
     private Meter meter;
 
-    @Column(name = "capture_time", nullable = false)
-    private Instant captureTime;
+    @Column(name = "reading_timestamp")
+    private Instant timestamp;
 
-    @Column(name = "obis_code", nullable = false)
-    private String obisCode;
-
-    @Column(name = "value", nullable = false)
+    @Column(name = "reading_value")
     private Double value;
+
+    @Column(name = "reading_type")
+    private String readingType;
+
+    @Column(name = "quality_code")
+    private Integer quality;
 
     @Column(name = "unit")
     private String unit;
 
-    @Column(name = "status")
-    private String status;
+    @Column(name = "communication_status")
+    private String communicationStatus;
 
-    @Column(name = "quality_code")
-    private String qualityCode;
+    @Column(name = "validation_status")
+    private String validationStatus;
 
-    @Column(name = "source")
-    private String source;
+    @Column(name = "validation_flags")
+    private Integer[] validationFlags;
 } 

@@ -1,7 +1,7 @@
 com\hes\collector\DataCollectorApplication.class
 com\hes\collector\service\DataCollectionService.class
-com\hes\collector\simulator\MeterSimulator.class
 com\hes\collector\simulator\SimulatedMeter.class
+com\hes\collector\simulator\CollectorMeterSimulator.class
 com\hes\collector\service\EnhancedSimulatorService.class
 com\hes\collector\config\KafkaConfig.class
 com\hes\collector\service\MeterService.class

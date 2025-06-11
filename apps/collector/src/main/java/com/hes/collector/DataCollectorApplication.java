@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@EntityScan(basePackages = "com.hes.common.entity")
+@EntityScan(basePackages = {"com.hes.data.entities", "com.hes.common.entity"})
 @EnableJpaRepositories(basePackages = "com.hes.common.repository")
 public class DataCollectorApplication {
     public static void main(String[] args) {

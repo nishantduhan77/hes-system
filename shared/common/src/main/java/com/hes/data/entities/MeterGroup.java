@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import java.util.UUID;
 
 @Data
-@Entity
+@Entity(name = "DataMeterGroup")
 @Table(name = "meter_groups")
 @EqualsAndHashCode(callSuper = true)
 public class MeterGroup extends BaseEntity {

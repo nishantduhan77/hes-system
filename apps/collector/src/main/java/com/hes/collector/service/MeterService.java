@@ -24,45 +24,57 @@ public class MeterService {
         return jdbcTemplate.query(sql, this::mapRowToMeter);
     }
 
-    public Meter getMeterById(UUID id) {
-        String sql = "SELECT * FROM meters WHERE meter_id = ?";
-        return jdbcTemplate.queryForObject(sql, this::mapRowToMeter, id);
+    public Meter getMeterBySerialNumber(String serialNumber) {
+        String sql = "SELECT * FROM meters WHERE meter_serial_number = ?";
+        return jdbcTemplate.queryForObject(sql, this::mapRowToMeter, serialNumber);
     }
 
     public void saveMeter(Meter meter) {
-        String sql = "INSERT INTO meters (meter_id, meter_code, serial_number, manufacturer, model, meter_type, location, firmware_version, installation_date, status, last_communication) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO meters (meter_serial_number, device_id, manufacturer_name, firmware_version, meter_type, meter_category, current_rating, year_of_manufacture, ctr, ptr, status, last_communication, protocol_version, ip_address, port, group_id, created_at, updated_at) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql,
-            meter.getId(),
-            meter.getMeterCode(),
             meter.getSerialNumber(),
+            meter.getDeviceId(),
             meter.getManufacturer(),
-            meter.getModel(),
-            meter.getMeterType(),
-            meter.getLocation(),
             meter.getFirmwareVersion(),
-            meter.getInstallationDate(),
-            meter.getStatus().toString(),
-            meter.getLastCommunication()
+            meter.getMeterType(),
+            meter.getMeterCategory(),
+            meter.getCurrentRating(),
+            meter.getYearOfManufacture(),
+            meter.getCtr(),
+            meter.getPtr(),
+            meter.getStatus() != null ? meter.getStatus().toString() : "DISCONNECTED",
+            meter.getLastCommunication(),
+            meter.getProtocolVersion(),
+            meter.getIpAddress(),
+            meter.getPort(),
+            meter.getGroup() != null ? meter.getGroup().getId() : null,
+            meter.getCreatedAt(),
+            meter.getUpdatedAt()
         );
     }
 
     private Meter mapRowToMeter(ResultSet rs, int rowNum) throws SQLException {
         Meter meter = new Meter();
-        meter.setId(UUID.fromString(rs.getString("meter_id")));
-        meter.setMeterCode(rs.getString("meter_code"));
-        meter.setSerialNumber(rs.getString("serial_number"));
-        meter.setManufacturer(rs.getString("manufacturer"));
-        meter.setModel(rs.getString("model"));
-        meter.setMeterType(rs.getString("meter_type"));
-        meter.setLocation(rs.getString("location"));
+        meter.setSerialNumber(rs.getString("meter_serial_number"));
+        meter.setDeviceId(rs.getString("device_id"));
+        meter.setManufacturer(rs.getString("manufacturer_name"));
         meter.setFirmwareVersion(rs.getString("firmware_version"));
-        meter.setInstallationDate(rs.getTimestamp("installation_date").toInstant());
-        meter.setStatus(MeterStatus.valueOf(rs.getString("status")));
+        meter.setMeterType(rs.getInt("meter_type"));
+        meter.setMeterCategory(rs.getString("meter_category"));
+        meter.setCurrentRating(rs.getString("current_rating"));
+        meter.setYearOfManufacture(rs.getInt("year_of_manufacture"));
+        meter.setCtr(rs.getLong("ctr"));
+        meter.setPtr(rs.getLong("ptr"));
+        meter.setStatus(rs.getString("status") != null ? MeterStatus.valueOf(rs.getString("status")) : MeterStatus.DISCONNECTED);
         meter.setLastCommunication(rs.getTimestamp("last_communication") != null ? 
             rs.getTimestamp("last_communication").toInstant() : null);
-        meter.setCreatedAt(rs.getTimestamp("created_at").toInstant());
-        meter.setUpdatedAt(rs.getTimestamp("updated_at").toInstant());
+        meter.setProtocolVersion(rs.getString("protocol_version"));
+        meter.setIpAddress(rs.getString("ip_address"));
+        meter.setPort(rs.getInt("port"));
+        // Note: group_id is handled by JPA relationships, not set here directly
+        meter.setCreatedAt(rs.getTimestamp("created_at") != null ? rs.getTimestamp("created_at").toInstant() : null);
+        meter.setUpdatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toInstant() : null);
         return meter;
     }
 } 

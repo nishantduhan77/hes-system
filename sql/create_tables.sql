@@ -1,4 +1,16 @@
 -- Active: 1748431273771@@localhost@5433@hes
+-- Drop existing tables in reverse order of dependencies
+DROP TABLE IF EXISTS eswf_alarms CASCADE;
+DROP TABLE IF EXISTS firmware_upgrades CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS billing_profiles CASCADE;
+DROP TABLE IF EXISTS daily_load_profiles CASCADE;
+DROP TABLE IF EXISTS block_load_profiles CASCADE;
+DROP TABLE IF EXISTS instantaneous_profiles CASCADE;
+DROP TABLE IF EXISTS event_types CASCADE;
+DROP TABLE IF EXISTS meters CASCADE;
+DROP TABLE IF EXISTS obis_codes CASCADE;
+
 -- Create OBIS Codes reference table
 CREATE TABLE obis_codes (
     id SERIAL PRIMARY KEY,
@@ -9,13 +21,9 @@ CREATE TABLE obis_codes (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
--- Drop the existing meters table if it exists
-DROP TABLE IF EXISTS meters CASCADE;
-
 -- Create Meters table (must be created first as other tables reference it)
 CREATE TABLE meters (
-    id SERIAL PRIMARY KEY,
-    meter_serial_number VARCHAR(50) NOT NULL UNIQUE,
+    meter_serial_number VARCHAR(50) PRIMARY KEY,
     device_id VARCHAR(50),
     manufacturer_name VARCHAR(100),
     firmware_version VARCHAR(50),
@@ -40,8 +48,8 @@ CREATE TABLE event_types (
 
 -- Create Instantaneous Profile table
 CREATE TABLE instantaneous_profiles (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     capture_time TIMESTAMPTZ NOT NULL,
     rtc_time VARCHAR(12),
     l1_current_ir FLOAT,
@@ -77,14 +85,14 @@ CREATE TABLE instantaneous_profiles (
     max_demand_apparent_import FLOAT,
     max_demand_apparent_datetime TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    UNIQUE (meter_id, capture_time)
+    PRIMARY KEY (id, capture_time),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create Block Load Profile table
 CREATE TABLE block_load_profiles (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     capture_time TIMESTAMPTZ NOT NULL,
     current_ir FLOAT,
     current_iy FLOAT,
@@ -103,14 +111,14 @@ CREATE TABLE block_load_profiles (
     meter_health_indicator INTEGER,
     signal_strength SMALLINT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    UNIQUE (meter_id, capture_time)
+    PRIMARY KEY (id, capture_time),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create Daily Load Profile table
 CREATE TABLE daily_load_profiles (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     capture_time TIMESTAMPTZ NOT NULL,
     cum_energy_wh_import FLOAT,
     cum_energy_wh_export FLOAT,
@@ -123,14 +131,14 @@ CREATE TABLE daily_load_profiles (
     max_demand_w FLOAT,
     max_demand_w_datetime TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    UNIQUE (meter_id, capture_time)
+    PRIMARY KEY (id, capture_time),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create Billing Profile table
 CREATE TABLE billing_profiles (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     billing_date TIMESTAMPTZ NOT NULL,
     system_pf_billing_period FLOAT,
     cum_energy_wh_import FLOAT,
@@ -179,14 +187,14 @@ CREATE TABLE billing_profiles (
     cum_energy_varh_q3 FLOAT,
     cum_energy_varh_q4 FLOAT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    UNIQUE (meter_id, billing_date)
+    PRIMARY KEY (id, billing_date),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create Events table
 CREATE TABLE events (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     event_type_id INTEGER NOT NULL,
     event_datetime TIMESTAMPTZ NOT NULL,
     event_code INTEGER NOT NULL,
@@ -201,15 +209,15 @@ CREATE TABLE events (
     cum_energy_vah_import FLOAT,
     sequence_number BIGINT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    FOREIGN KEY (event_type_id) REFERENCES event_types(id),
-    UNIQUE (meter_id, event_datetime, event_code)
+    PRIMARY KEY (id, event_datetime),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE,
+    FOREIGN KEY (event_type_id) REFERENCES event_types(id)
 );
 
 -- Create Firmware Upgrades table
 CREATE TABLE firmware_upgrades (
     id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     block_size BIGINT,
     image_first_not_transferred BOOLEAN,
     image_transfer_enabled BOOLEAN,
@@ -223,13 +231,13 @@ CREATE TABLE firmware_upgrades (
     status VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create ESWF Alarms table
 CREATE TABLE eswf_alarms (
-    id SERIAL PRIMARY KEY,
-    meter_id INTEGER NOT NULL,
+    id SERIAL,
+    meter_serial_number VARCHAR(50) NOT NULL,
     alarm_datetime TIMESTAMPTZ NOT NULL,
     r_phase_voltage_missing BOOLEAN DEFAULT FALSE,
     y_phase_voltage_missing BOOLEAN DEFAULT FALSE,
@@ -245,8 +253,8 @@ CREATE TABLE eswf_alarms (
     last_gasp BOOLEAN DEFAULT FALSE,
     first_breath BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (meter_id) REFERENCES meters(id) ON DELETE CASCADE,
-    UNIQUE (meter_id, alarm_datetime)
+    PRIMARY KEY (id, alarm_datetime),
+    FOREIGN KEY (meter_serial_number) REFERENCES meters(meter_serial_number) ON DELETE CASCADE
 );
 
 -- Create TimescaleDB hypertables
@@ -258,9 +266,9 @@ SELECT create_hypertable('events', 'event_datetime', if_not_exists => TRUE);
 SELECT create_hypertable('eswf_alarms', 'alarm_datetime', if_not_exists => TRUE);
 
 -- Create indexes for better query performance
-CREATE INDEX idx_instantaneous_profiles_meter_time ON instantaneous_profiles (meter_id, capture_time DESC);
-CREATE INDEX idx_block_load_profiles_meter_time ON block_load_profiles (meter_id, capture_time DESC);
-CREATE INDEX idx_daily_load_profiles_meter_time ON daily_load_profiles (meter_id, capture_time DESC);
-CREATE INDEX idx_billing_profiles_meter_date ON billing_profiles (meter_id, billing_date DESC);
-CREATE INDEX idx_events_meter_datetime ON events (meter_id, event_datetime DESC);
-CREATE INDEX idx_eswf_alarms_meter_datetime ON eswf_alarms (meter_id, alarm_datetime DESC); 
+CREATE INDEX IF NOT EXISTS idx_instantaneous_profiles_meter_time ON instantaneous_profiles (meter_serial_number, capture_time DESC);
+CREATE INDEX IF NOT EXISTS idx_block_load_profiles_meter_time ON block_load_profiles (meter_serial_number, capture_time DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_load_profiles_meter_time ON daily_load_profiles (meter_serial_number, capture_time DESC);
+CREATE INDEX IF NOT EXISTS idx_billing_profiles_meter_date ON billing_profiles (meter_serial_number, billing_date DESC);
+CREATE INDEX IF NOT EXISTS idx_events_meter_datetime ON events (meter_serial_number, event_datetime DESC);
+CREATE INDEX IF NOT EXISTS idx_eswf_alarms_meter_datetime ON eswf_alarms (meter_serial_number, alarm_datetime DESC); 

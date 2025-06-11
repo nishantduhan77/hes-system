@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Data
 @NoArgsConstructor
-@Entity
+@Entity(name = "CommonMeterReading")
 @Table(name = "meter_readings")
 public class MeterReading {
     @Id

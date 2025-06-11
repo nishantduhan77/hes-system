@@ -60,4 +60,28 @@ public class SimulatedMeter {
     public double generateFrequency() {
         return 50 + (random.nextDouble() * 0.2 - 0.1); // 49.9-50.1Hz
     }
+
+    public double generateApparentPower() {
+        return generateActivePowerImport() / generatePowerFactor(); // S = P/PF
+    }
+
+    public double generateBlockEnergy() {
+        return generateActivePowerImport() * 0.25; // 15-min energy in Wh
+    }
+
+    public double generateDailyEnergy() {
+        return generateActivePowerImport() * 24; // Daily energy in Wh
+    }
+
+    public double generateMonthlyEnergy() {
+        return generateActivePowerImport() * 24 * 30; // Monthly energy in Wh
+    }
+
+    public double generateMaxDemand() {
+        return generateActivePowerImport() * 1.5; // Peak demand 50% higher than average
+    }
+
+    public double generateCumulativeEnergy() {
+        return random.nextDouble() * 1000000; // Random cumulative energy up to 1MWh
+    }
 } 

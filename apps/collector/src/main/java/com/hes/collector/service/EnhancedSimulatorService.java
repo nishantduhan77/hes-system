@@ -1,6 +1,6 @@
 package com.hes.collector.service;
 
-import com.hes.collector.simulator.MeterSimulator;
+import com.hes.collector.simulator.CollectorMeterSimulator;
 import com.hes.data.entities.Meter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +13,10 @@ import java.util.List;
 @Service
 public class EnhancedSimulatorService {
     private static final Logger logger = LoggerFactory.getLogger(EnhancedSimulatorService.class);
-    private final MeterSimulator simulator;
+    private final CollectorMeterSimulator simulator;
     private final MeterService meterService;
 
-    public EnhancedSimulatorService(MeterSimulator simulator, MeterService meterService) {
+    public EnhancedSimulatorService(CollectorMeterSimulator simulator, MeterService meterService) {
         this.simulator = simulator;
         this.meterService = meterService;
         logger.info("EnhancedSimulatorService initialized with simulator: {} and meterService: {}", simulator, meterService);

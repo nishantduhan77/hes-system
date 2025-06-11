@@ -3,5 +3,5 @@ C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\DataCol
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\DataCollectionService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\EnhancedSimulatorService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\MeterService.java
-C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\simulator\MeterSimulator.java
+C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\simulator\CollectorMeterSimulator.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\simulator\SimulatedMeter.java

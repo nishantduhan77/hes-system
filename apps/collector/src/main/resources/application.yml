@@ -3,9 +3,9 @@ spring:
     name: hes-data-collector
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/hes_db
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://localhost:5433/hes
+    username: hes_user
+    password: hes_password
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -30,7 +30,7 @@ spring:
     producer:
       client-id: ${spring.application.name}
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       transaction-id-prefix: tx-
       properties:
         enable.idempotence: true
@@ -42,7 +42,7 @@ spring:
       group-id: ${spring.application.name}-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         isolation.level: read_committed
 

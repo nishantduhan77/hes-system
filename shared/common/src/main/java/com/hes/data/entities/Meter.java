@@ -7,41 +7,42 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Data
-@Entity
+@Entity(name = "DataMeter")
 @Table(name = "meters")
 @EqualsAndHashCode(callSuper = true)
 public class Meter extends BaseEntity {
     @Id
-    @GeneratedValue(generator = "UUID")
-    @Column(name = "meter_id")
-    private UUID id;
-
-    @Column(name = "meter_code", nullable = false, unique = true)
-    private String meterCode;
-
-    @Column(name = "serial_number", nullable = false, unique = true)
+    @Column(name = "meter_serial_number")
     private String serialNumber;
 
-    @Column(name = "manufacturer", nullable = false)
+    @Column(name = "device_id")
+    private String deviceId;
+
+    @Column(name = "manufacturer_name", nullable = false)
     private String manufacturer;
-
-    @Column(name = "model", nullable = false)
-    private String model;
-
-    @Column(name = "meter_type", nullable = false)
-    private String meterType;
-
-    @Column(name = "location", nullable = false)
-    private String location;
 
     @Column(name = "firmware_version")
     private String firmwareVersion;
 
-    @Column(name = "installation_date", nullable = false)
-    private Instant installationDate;
+    @Column(name = "meter_type", nullable = false)
+    private Integer meterType;
+
+    @Column(name = "meter_category", nullable = false)
+    private String meterCategory;
+
+    @Column(name = "current_rating")
+    private String currentRating;
+
+    @Column(name = "year_of_manufacture")
+    private Integer yearOfManufacture;
+
+    @Column(name = "ctr")
+    private Long ctr;
+
+    @Column(name = "ptr")
+    private Long ptr;
 
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
