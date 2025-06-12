@@ -12,22 +12,35 @@ CREATE TABLE meter_groups (
 );
 
 -- Meters table
-CREATE TABLE meters (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    serial_number VARCHAR(50) NOT NULL,
-    manufacturer VARCHAR(100) NOT NULL,
-    model VARCHAR(100) NOT NULL,
-    firmware_version VARCHAR(50),
-    protocol_version VARCHAR(50),
-    ip_address INET,
-    port INTEGER,
-    group_id UUID REFERENCES meter_groups(id),
-    status VARCHAR(20) NOT NULL DEFAULT 'DISCONNECTED',
-    last_connected_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_meters_serial_number UNIQUE (serial_number)
-);
+-- Meters table already exists, so we'll add any missing columns
+ALTER TABLE meters
+ADD COLUMN IF NOT EXISTS firmware_version VARCHAR(50),
+ADD COLUMN IF NOT EXISTS protocol_version VARCHAR(50),
+ADD COLUMN IF NOT EXISTS ip_address INET,
+ADD COLUMN IF NOT EXISTS port INTEGER,
+ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES meter_groups(id),
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'DISCONNECTED',
+ADD COLUMN IF NOT EXISTS last_connected_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS meter_type VARCHAR(50),
+ADD COLUMN IF NOT EXISTS installation_date DATE,
+ADD COLUMN IF NOT EXISTS location_coordinates POINT,
+ADD COLUMN IF NOT EXISTS timezone VARCHAR(50),
+ADD COLUMN IF NOT EXISTS communication_protocol VARCHAR(50),
+ADD COLUMN IF NOT EXISTS meter_program_id VARCHAR(50),
+ADD COLUMN IF NOT EXISTS meter_category VARCHAR(50),
+ADD COLUMN IF NOT EXISTS is_virtual BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS last_reading_timestamp TIMESTAMPTZ;
+
+-- Add unique constraint if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uk_meters_serial_number') THEN
+        ALTER TABLE meters ADD CONSTRAINT uk_meters_serial_number UNIQUE (serial_number);
+    END IF;
+END $$;
 
 -- Create indexes for common queries
 CREATE INDEX idx_meters_group_id ON meters(group_id);
@@ -35,8 +48,8 @@ CREATE INDEX idx_meters_status ON meters(status);
 CREATE INDEX idx_meters_last_connected_at ON meters(last_connected_at);
 
 -- Meter readings table (TimescaleDB hypertable)
-CREATE TABLE meter_readings (
-    meter_id UUID NOT NULL REFERENCES meters(id),
+CREATE TABLE IF NOT EXISTS meter_readings (
+    meter_id UUID NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     reading_type VARCHAR(50) NOT NULL,
     value DOUBLE PRECISION NOT NULL,
@@ -46,14 +59,31 @@ CREATE TABLE meter_readings (
     PRIMARY KEY (meter_id, timestamp, reading_type)
 );
 
+-- Add foreign key constraint if meters table exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'meters') AND
+       NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'fk_meter_readings_meter_id') THEN
+        ALTER TABLE meter_readings
+        ADD CONSTRAINT fk_meter_readings_meter_id
+        FOREIGN KEY (meter_id) REFERENCES meters(meter_id);
+    END IF;
+END $$;
+
 -- Convert to hypertable
+
+
 SELECT create_hypertable(
     'meter_readings',
     'timestamp',
     chunk_time_interval => INTERVAL '1 day',
-    partitioning_column => 'meter_id',
-    number_partitions => 4
+    if_not_exists => TRUE,
+    migrate_data => TRUE
 );
+
+-- Drop primary key constraint and recreate with timestamp included
+ALTER TABLE meter_readings DROP CONSTRAINT meter_readings_pkey;
+ALTER TABLE meter_readings ADD PRIMARY KEY (meter_id, timestamp, reading_type);
 
 -- Create indexes for meter readings
 CREATE INDEX idx_readings_meter_timestamp ON meter_readings(meter_id, timestamp DESC);
@@ -62,7 +92,7 @@ CREATE INDEX idx_readings_type_timestamp ON meter_readings(reading_type, timesta
 -- Meter events table (for status changes, alarms, etc.)
 CREATE TABLE meter_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    meter_id UUID NOT NULL REFERENCES meters(id),
+    meter_id UUID NOT NULL REFERENCES meters(meter_id),
     event_type VARCHAR(50) NOT NULL,
     severity VARCHAR(20) NOT NULL,
     description TEXT,

@@ -214,3 +214,218 @@ CREATE TABLE profile_status (
 );
 
 CREATE INDEX idx_profile_status_meter ON profile_status(meter_id, profile_type);
+
+
+-- Create Instantaneous Profile table
+CREATE TABLE instantaneous_profiles (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    capture_time TIMESTAMPTZ NOT NULL,
+    rtc_time VARCHAR(12),
+    l1_current_ir FLOAT,
+    l2_current_iy FLOAT,
+    l3_current_ib FLOAT,
+    l1_voltage_vrn FLOAT,
+    l2_voltage_vyn FLOAT,
+    l3_voltage_vbn FLOAT,
+    l1_power_factor FLOAT,
+    l2_power_factor FLOAT,
+    l3_power_factor FLOAT,
+    three_phase_pf FLOAT,
+    frequency FLOAT,
+    apparent_power FLOAT,
+    active_power FLOAT,
+    reactive_power FLOAT,
+    power_failures INTEGER,
+    power_off_duration INTEGER,
+    tamper_count INTEGER,
+    billing_count INTEGER,
+    programming_count INTEGER,
+    last_billing_date VARCHAR(12),
+    cum_energy_wh_import FLOAT,
+    cum_energy_wh_export FLOAT,
+    cum_energy_varh_q1 FLOAT,
+    cum_energy_varh_q2 FLOAT,
+    cum_energy_varh_q3 FLOAT,
+    cum_energy_varh_q4 FLOAT,
+    cum_energy_vah_import FLOAT,
+    cum_energy_vah_export FLOAT,
+    max_demand_active_import FLOAT,
+    max_demand_active_datetime TIMESTAMPTZ,
+    max_demand_apparent_import FLOAT,
+    max_demand_apparent_datetime TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Block Load Profile table
+CREATE TABLE block_load_profiles (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    capture_time TIMESTAMPTZ NOT NULL,
+    current_ir FLOAT,
+    current_iy FLOAT,
+    current_ib FLOAT,
+    voltage_vrn FLOAT,
+    voltage_vyn FLOAT,
+    voltage_vbn FLOAT,
+    block_energy_wh_import FLOAT,
+    block_energy_wh_export FLOAT,
+    block_energy_varh_q1 FLOAT,
+    block_energy_varh_q2 FLOAT,
+    block_energy_varh_q3 FLOAT,
+    block_energy_varh_q4 FLOAT,
+    block_energy_vah_import FLOAT,
+    block_energy_vah_export FLOAT,
+    meter_health_indicator INTEGER,
+    signal_strength SMALLINT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Daily Load Profile table
+CREATE TABLE daily_load_profiles (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    capture_time TIMESTAMPTZ NOT NULL,
+    cum_energy_wh_import FLOAT,
+    cum_energy_wh_export FLOAT,
+    cum_energy_vah_import FLOAT,
+    cum_energy_vah_export FLOAT,
+    cum_energy_varh_q1 FLOAT,
+    cum_energy_varh_q2 FLOAT,
+    cum_energy_varh_q3 FLOAT,
+    cum_energy_varh_q4 FLOAT,
+    max_demand_w FLOAT,
+    max_demand_w_datetime TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Billing Profile table
+CREATE TABLE billing_profiles (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    billing_date TIMESTAMPTZ NOT NULL,
+    system_pf_billing_period FLOAT,
+    cum_energy_wh_import FLOAT,
+    cum_energy_wh_import_tz1 FLOAT,
+    cum_energy_wh_import_tz2 FLOAT,
+    cum_energy_wh_import_tz3 FLOAT,
+    cum_energy_wh_import_tz4 FLOAT,
+    cum_energy_wh_import_tz5 FLOAT,
+    cum_energy_wh_import_tz6 FLOAT,
+    cum_energy_wh_import_tz7 FLOAT,
+    cum_energy_wh_import_tz8 FLOAT,
+    cum_energy_vah_import FLOAT,
+    cum_energy_vah_import_tz1 FLOAT,
+    cum_energy_vah_import_tz2 FLOAT,
+    cum_energy_vah_import_tz3 FLOAT,
+    cum_energy_vah_import_tz4 FLOAT,
+    cum_energy_vah_import_tz5 FLOAT,
+    cum_energy_vah_import_tz6 FLOAT,
+    cum_energy_vah_import_tz7 FLOAT,
+    cum_energy_vah_import_tz8 FLOAT,
+    md_w_import FLOAT,
+    md_w_datetime TIMESTAMPTZ,
+    md_w_tz1 FLOAT,
+    md_w_tz1_datetime TIMESTAMPTZ,
+    md_w_tz2 FLOAT,
+    md_w_tz2_datetime TIMESTAMPTZ,
+    md_w_tz3 FLOAT,
+    md_w_tz3_datetime TIMESTAMPTZ,
+    md_w_tz4 FLOAT,
+    md_w_tz4_datetime TIMESTAMPTZ,
+    md_w_tz5 FLOAT,
+    md_w_tz5_datetime TIMESTAMPTZ,
+    md_w_tz6 FLOAT,
+    md_w_tz6_datetime TIMESTAMPTZ,
+    md_w_tz7 FLOAT,
+    md_w_tz7_datetime TIMESTAMPTZ,
+    md_w_tz8 FLOAT,
+    md_w_tz8_datetime TIMESTAMPTZ,
+    md_va_import FLOAT,
+    md_va_datetime TIMESTAMPTZ,
+    billing_power_on_duration INTEGER,
+    cum_energy_wh_export FLOAT,
+    cum_energy_vah_export FLOAT,
+    cum_energy_varh_q1 FLOAT,
+    cum_energy_varh_q2 FLOAT,
+    cum_energy_varh_q3 FLOAT,
+    cum_energy_varh_q4 FLOAT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Event Types table
+CREATE TABLE event_types (
+    id SERIAL PRIMARY KEY,
+    event_group VARCHAR(50) NOT NULL,
+    event_code INTEGER NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Events table
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    event_type_id INTEGER REFERENCES event_types(id),
+    event_datetime TIMESTAMPTZ NOT NULL,
+    event_code INTEGER NOT NULL,
+    current_ir FLOAT,
+    current_iy FLOAT,
+    current_ib FLOAT,
+    voltage_vrn FLOAT,
+    voltage_vyn FLOAT,
+    voltage_vbn FLOAT,
+    power_factor FLOAT,
+    cum_energy_wh_import FLOAT,
+    cum_energy_vah_import FLOAT,
+    sequence_number BIGINT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Firmware Upgrades table
+CREATE TABLE firmware_upgrades (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    block_size BIGINT,
+    image_first_not_transferred BOOLEAN,
+    image_transfer_enabled BOOLEAN,
+    image_transfer_status INTEGER,
+    image_activation_info TEXT,
+    transfer_initiate_time TIMESTAMPTZ,
+    transfer_complete_time TIMESTAMPTZ,
+    verification_time TIMESTAMPTZ,
+    activation_time TIMESTAMPTZ,
+    future_activation_time TIMESTAMPTZ,
+    status VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create ESWF Alarms table
+CREATE TABLE eswf_alarms (
+    id SERIAL PRIMARY KEY,
+    meter_id INTEGER REFERENCES meters(id),
+    alarm_datetime TIMESTAMPTZ NOT NULL,
+    r_phase_voltage_missing BOOLEAN DEFAULT FALSE,
+    y_phase_voltage_missing BOOLEAN DEFAULT FALSE,
+    b_phase_voltage_missing BOOLEAN DEFAULT FALSE,
+    over_voltage BOOLEAN DEFAULT FALSE,
+    low_voltage BOOLEAN DEFAULT FALSE,
+    voltage_unbalance BOOLEAN DEFAULT FALSE,
+    ct_reverse BOOLEAN DEFAULT FALSE,
+    ct_open BOOLEAN DEFAULT FALSE,
+    current_unbalance BOOLEAN DEFAULT FALSE,
+    over_current BOOLEAN DEFAULT FALSE,
+    power_factor BOOLEAN DEFAULT FALSE,
+    last_gasp BOOLEAN DEFAULT FALSE,
+    first_breath BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create TimescaleDB hypertables
+SELECT create_hypertable('instantaneous_profiles', 'capture_time');
+SELECT create_hypertable('block_load_profiles', 'capture_time');
+SELECT create_hypertable('daily_load_profiles', 'capture_time');
+SELECT create_hypertable('billing_profiles', 'billing_date');
+SELECT create_hypertable('events', 'event_datetime');
+SELECT create_hypertable('eswf_alarms', 'alarm_datetime');

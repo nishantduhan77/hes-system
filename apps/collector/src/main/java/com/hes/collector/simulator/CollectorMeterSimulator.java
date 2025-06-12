@@ -23,7 +23,7 @@ public class CollectorMeterSimulator {
     private final List<SimulatedMeter> simulatedMeters = new ArrayList<>();
     private final JdbcTemplate jdbcTemplate;
     private final MeterRepository meterRepository;
-    private final DateTimeFormatter rtcFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private final DateTimeFormatter rtcFormatter = DateTimeFormatter.ofPattern("yyMMddHHmmss");
 
     public CollectorMeterSimulator(JdbcTemplate jdbcTemplate, MeterRepository meterRepository) {
         this.jdbcTemplate = jdbcTemplate;
@@ -84,9 +84,9 @@ public class CollectorMeterSimulator {
                         "l1_current_ir, l2_current_iy, l3_current_ib, " +
                         "l1_voltage_vrn, l2_voltage_vyn, l3_voltage_vbn, " +
                         "l1_power_factor, l2_power_factor, l3_power_factor, " +
-                        "frequency, active_power, reactive_power, apparent_power, " +
+                        "three_phase_pf, frequency, apparent_power, active_power, reactive_power, " +
                         "cum_energy_wh_import, cum_energy_wh_export) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             Timestamp timestamp = Timestamp.from(now);
             String rtcTime = formatRtcTime(now);
@@ -104,18 +104,19 @@ public class CollectorMeterSimulator {
                 simMeter.generatePowerFactor(),
                 simMeter.generatePowerFactor(),
                 simMeter.generatePowerFactor(),
+                simMeter.generatePowerFactor(),
                 simMeter.generateFrequency(),
+                simMeter.generateApparentPower(),
                 simMeter.generateActivePowerImport(),
                 simMeter.generateReactivePower(),
-                simMeter.generateApparentPower(),
                 simMeter.generateCumulativeEnergy(),
                 simMeter.generateCumulativeEnergy() * 0.1
             );
             
-            log.debug("Inserted {} instantaneous reading for meter {}", rowsInserted, simMeter.getMeter().getSerial());
+            log.debug("Inserted {} instantaneous reading for meter {}", rowsInserted, simMeter.getMeter().getSerialNumber());
         } catch (Exception e) {
             log.error("Failed to insert instantaneous reading for meter {}: {}", 
-                simMeter.getMeter().getSerial(), e.getMessage(), e);
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }
 
@@ -138,7 +139,7 @@ public class CollectorMeterSimulator {
                 String rtcTime = formatRtcTime(now);
                 
                 int rowsInserted = jdbcTemplate.update(sql,
-                    simMeter.getMeter().getSerial(),
+                    simMeter.getMeter().getSerialNumber(),
                     timestamp,
                     rtcTime,
                     simMeter.generateCurrent(),
@@ -160,11 +161,11 @@ public class CollectorMeterSimulator {
                 );
                 
                 log.debug("Inserted {} block load profile for meter {} at 15-min mark", 
-                    rowsInserted, simMeter.getMeter().getSerial());
+                    rowsInserted, simMeter.getMeter().getSerialNumber());
             }
         } catch (Exception e) {
             log.error("Failed to insert block load profile for meter {}: {}", 
-                simMeter.getMeter().getSerial(), e.getMessage(), e);
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }
 
@@ -186,7 +187,7 @@ public class CollectorMeterSimulator {
                 String rtcTime = formatRtcTime(now);
                 
                 int rowsInserted = jdbcTemplate.update(sql,
-                    simMeter.getMeter().getSerial(),
+                    simMeter.getMeter().getSerialNumber(),
                     timestamp,
                     rtcTime,
                     dailyEnergy,
@@ -202,11 +203,11 @@ public class CollectorMeterSimulator {
                 );
                 
                 log.info("Inserted {} daily load profile for meter {} at midnight", 
-                    rowsInserted, simMeter.getMeter().getSerial());
+                    rowsInserted, simMeter.getMeter().getSerialNumber());
             }
         } catch (Exception e) {
             log.error("Failed to insert daily load profile for meter {}: {}", 
-                simMeter.getMeter().getSerial(), e.getMessage(), e);
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }
 
@@ -228,7 +229,7 @@ public class CollectorMeterSimulator {
                 String rtcTime = formatRtcTime(now);
                 
                 int rowsInserted = jdbcTemplate.update(sql,
-                    simMeter.getMeter().getSerial(),
+                    simMeter.getMeter().getSerialNumber(),
                     timestamp,
                     rtcTime,
                     monthlyEnergy,
@@ -244,11 +245,11 @@ public class CollectorMeterSimulator {
                 );
                 
                 log.info("Inserted {} billing profile for meter {} at month start", 
-                    rowsInserted, simMeter.getMeter().getSerial());
+                    rowsInserted, simMeter.getMeter().getSerialNumber());
             }
         } catch (Exception e) {
             log.error("Failed to insert billing profile for meter {}: {}", 
-                simMeter.getMeter().getSerial(), e.getMessage(), e);
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }
 
@@ -261,7 +262,7 @@ public class CollectorMeterSimulator {
             String rtcTime = formatRtcTime(now);
             
             int rowsInserted = jdbcTemplate.update(sql,
-                simMeter.getMeter().getSerial(),
+                simMeter.getMeter().getSerialNumber(),
                 1, // Default event type
                 Timestamp.from(now),
                 rtcTime,
@@ -271,10 +272,10 @@ public class CollectorMeterSimulator {
                 simMeter.generatePowerFactor()
             );
             
-            log.info("Inserted {} event for meter {}", rowsInserted, simMeter.getMeter().getSerial());
+            log.info("Inserted {} event for meter {}", rowsInserted, simMeter.getMeter().getSerialNumber());
         } catch (Exception e) {
             log.error("Failed to insert event for meter {}: {}", 
-                simMeter.getMeter().getSerial(), e.getMessage(), e);
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }
 }

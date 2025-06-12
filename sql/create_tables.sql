@@ -34,7 +34,13 @@ CREATE TABLE meters (
     ctr BIGINT,
     ptr BIGINT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    group_id UUID,
+    status VARCHAR(50),
+    last_communication TIMESTAMP,
+    protocol_version VARCHAR(50),
+    ip_address VARCHAR(50),
+    port INTEGER
 );
 
 -- Create Event Types table
@@ -271,4 +277,12 @@ CREATE INDEX IF NOT EXISTS idx_block_load_profiles_meter_time ON block_load_prof
 CREATE INDEX IF NOT EXISTS idx_daily_load_profiles_meter_time ON daily_load_profiles (meter_serial_number, capture_time DESC);
 CREATE INDEX IF NOT EXISTS idx_billing_profiles_meter_date ON billing_profiles (meter_serial_number, billing_date DESC);
 CREATE INDEX IF NOT EXISTS idx_events_meter_datetime ON events (meter_serial_number, event_datetime DESC);
-CREATE INDEX IF NOT EXISTS idx_eswf_alarms_meter_datetime ON eswf_alarms (meter_serial_number, alarm_datetime DESC); 
+CREATE INDEX IF NOT EXISTS idx_eswf_alarms_meter_datetime ON eswf_alarms (meter_serial_number, alarm_datetime DESC);
+
+-- Add missing columns to meters table
+ALTER TABLE meters ADD COLUMN group_id UUID;
+ALTER TABLE meters ADD COLUMN status VARCHAR(50);
+ALTER TABLE meters ADD COLUMN last_communication TIMESTAMP;
+ALTER TABLE meters ADD COLUMN protocol_version VARCHAR(50);
+ALTER TABLE meters ADD COLUMN ip_address VARCHAR(50);
+ALTER TABLE meters ADD COLUMN port INTEGER; 
