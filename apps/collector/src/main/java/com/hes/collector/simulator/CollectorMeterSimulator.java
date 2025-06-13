@@ -58,9 +58,10 @@ public class CollectorMeterSimulator {
                 generateAndSaveDailyLoadProfile(simMeter, now);
                 generateAndSaveBillingProfile(simMeter, now);
                 
-                // Randomly generate events (1% chance)
-                if (random.nextDouble() < 0.01) {
+                // Generate events with 10% chance
+                if (random.nextDouble() < 0.10) {
                     generateAndSaveEvent(simMeter, now);
+                    generateAndSaveESWF(simMeter, now);
                 }
                 
                 log.debug("Generated readings for meter: {}", simMeter.getMeter().getSerialNumber());
@@ -125,7 +126,7 @@ public class CollectorMeterSimulator {
             // Only generate block load profile every 15 minutes
             LocalDateTime localNow = LocalDateTime.ofInstant(now, ZoneId.systemDefault());
             if (localNow.getMinute() % 15 == 0) {
-                String sql = "INSERT INTO block_load_profiles (meter_serial_number, capture_time, rtc_time, " +
+                String sql = "INSERT INTO block_load_profiles (meter_serial_number, capture_time, " +
                             "current_ir, current_iy, current_ib, " +
                             "voltage_vrn, voltage_vyn, voltage_vbn, " +
                             "block_energy_wh_import, block_energy_wh_export, " +
@@ -133,15 +134,11 @@ public class CollectorMeterSimulator {
                             "block_energy_varh_q3, block_energy_varh_q4, " +
                             "block_energy_vah_import, block_energy_vah_export, " +
                             "meter_health_indicator, signal_strength) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-                Timestamp timestamp = Timestamp.from(now);
-                String rtcTime = formatRtcTime(now);
-                
                 int rowsInserted = jdbcTemplate.update(sql,
                     simMeter.getMeter().getSerialNumber(),
-                    timestamp,
-                    rtcTime,
+                    Timestamp.from(now),
                     simMeter.generateCurrent(),
                     simMeter.generateCurrent(),
                     simMeter.generateCurrent(),
@@ -149,18 +146,18 @@ public class CollectorMeterSimulator {
                     simMeter.generateVoltage(),
                     simMeter.generateVoltage(),
                     simMeter.generateBlockEnergy(),
-                    simMeter.generateBlockEnergy() * 0.1,
-                    simMeter.generateBlockEnergy() * 0.25,
-                    simMeter.generateBlockEnergy() * 0.25,
-                    simMeter.generateBlockEnergy() * 0.25,
-                    simMeter.generateBlockEnergy() * 0.25,
-                    simMeter.generateBlockEnergy() * 1.1,
-                    simMeter.generateBlockEnergy() * 0.1,
-                    1, // Healthy
-                    random.nextInt(31) // 0-30 signal strength
+                    simMeter.generateBlockEnergy() * 0.1, // 10% export
+                    simMeter.generateBlockEnergy() * 0.2, // Q1
+                    simMeter.generateBlockEnergy() * 0.3, // Q2
+                    simMeter.generateBlockEnergy() * 0.4, // Q3
+                    simMeter.generateBlockEnergy() * 0.5, // Q4
+                    simMeter.generateBlockEnergy() * 1.1, // VAH import
+                    simMeter.generateBlockEnergy() * 0.11, // VAH export
+                    random.nextInt(100), // Health indicator 0-99
+                    (short)random.nextInt(100) // Signal strength 0-99
                 );
                 
-                log.debug("Inserted {} block load profile for meter {} at 15-min mark", 
+                log.info("Inserted {} block load profile for meter {} at 15-min mark", 
                     rowsInserted, simMeter.getMeter().getSerialNumber());
             }
         } catch (Exception e) {
@@ -255,26 +252,84 @@ public class CollectorMeterSimulator {
 
     private void generateAndSaveEvent(SimulatedMeter simMeter, Instant now) {
         try {
-            String sql = "INSERT INTO events (meter_serial_number, event_type_id, event_datetime, rtc_time, " +
-                        "event_code, current_ir, voltage_vrn, power_factor) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO events (meter_serial_number, event_type_id, event_datetime, " +
+                        "event_code, current_ir, current_iy, current_ib, " +
+                        "voltage_vrn, voltage_vyn, voltage_vbn, " +
+                        "power_factor, cum_energy_wh_import, cum_energy_vah_import, sequence_number) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            String rtcTime = formatRtcTime(now);
+            // Generate random event type (1-12)
+            int eventTypeId = random.nextInt(12) + 1;
             
             int rowsInserted = jdbcTemplate.update(sql,
                 simMeter.getMeter().getSerialNumber(),
-                1, // Default event type
+                eventTypeId,
                 Timestamp.from(now),
-                rtcTime,
-                random.nextInt(100) + 1, // Random event code 1-100
+                eventTypeId, // Use event_type_id as event_code
+                simMeter.generateCurrent(),
+                simMeter.generateCurrent(),
                 simMeter.generateCurrent(),
                 simMeter.generateVoltage(),
-                simMeter.generatePowerFactor()
+                simMeter.generateVoltage(),
+                simMeter.generateVoltage(),
+                simMeter.generatePowerFactor(),
+                simMeter.generateCumulativeEnergy(),
+                simMeter.generateCumulativeEnergy() * 1.1,
+                random.nextLong() // Random sequence number
             );
             
             log.info("Inserted {} event for meter {}", rowsInserted, simMeter.getMeter().getSerialNumber());
         } catch (Exception e) {
             log.error("Failed to insert event for meter {}: {}", 
+                simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
+        }
+    }
+
+    private void generateAndSaveESWF(SimulatedMeter simMeter, Instant now) {
+        try {
+            String sql = "INSERT INTO eswf_alarms (meter_serial_number, alarm_datetime, " +
+                        "r_phase_voltage_missing, y_phase_voltage_missing, b_phase_voltage_missing, " +
+                        "over_voltage, low_voltage, voltage_unbalance, " +
+                        "ct_reverse, ct_open, current_unbalance, " +
+                        "over_current, power_factor, last_gasp, first_breath) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            // Generate random ESWF bits
+            boolean rPhaseMissing = random.nextBoolean();
+            boolean yPhaseMissing = random.nextBoolean();
+            boolean bPhaseMissing = random.nextBoolean();
+            boolean overVoltage = random.nextBoolean();
+            boolean lowVoltage = random.nextBoolean();
+            boolean voltageUnbalance = random.nextBoolean();
+            boolean ctReverse = random.nextBoolean();
+            boolean ctOpen = random.nextBoolean();
+            boolean currentUnbalance = random.nextBoolean();
+            boolean overCurrent = random.nextBoolean();
+            boolean powerFactor = random.nextBoolean();
+            boolean lastGasp = random.nextBoolean();
+            boolean firstBreath = random.nextBoolean();
+
+            int rowsInserted = jdbcTemplate.update(sql,
+                simMeter.getMeter().getSerialNumber(),
+                Timestamp.from(now),
+                rPhaseMissing,
+                yPhaseMissing,
+                bPhaseMissing,
+                overVoltage,
+                lowVoltage,
+                voltageUnbalance,
+                ctReverse,
+                ctOpen,
+                currentUnbalance,
+                overCurrent,
+                powerFactor,
+                lastGasp,
+                firstBreath
+            );
+            
+            log.info("Inserted {} ESWF alarm for meter {}", rowsInserted, simMeter.getMeter().getSerialNumber());
+        } catch (Exception e) {
+            log.error("Failed to insert ESWF alarm for meter {}: {}", 
                 simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
         }
     }

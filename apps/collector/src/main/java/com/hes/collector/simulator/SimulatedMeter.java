@@ -66,7 +66,7 @@ public class SimulatedMeter {
     }
 
     public double generateBlockEnergy() {
-        return generateActivePowerImport() * 0.25; // 15-min energy in Wh
+        return random.nextDouble() * 1000; // 0-1000 kWh
     }
 
     public double generateDailyEnergy() {
