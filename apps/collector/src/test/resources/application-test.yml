@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: hes-collector-test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: false
+
+server:
+  port: 0
+
+logging:
+  level:
+    root: WARN
+    com.hes: DEBUG
+    org.springframework: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+dlms:
+  readTimeoutMs: 1000
+  connectTimeoutMs: 2000
+  maxRetries: 2
+  useHdlc: false
+  clientId: 1
+  serverLowerMacAddress: 17
+  serverUpperMacAddress: 0
+  authenticationKey: 41424344454647484950515253545556
+  encryptionKey: 41424344454647484950515253545556
+  systemTitle: 4D4D4D0000000001
+  useHighLevelSecurity: false
+  maxPduSize: 1024
+  windowSize: 1
+  maxInfoLength: 128
+  useCompression: false
+  associationTimeout: 10000
+  releaseTimeout: 2000
+  frameTimeout: 500
+  inactivityTimeout: 30000
+  keepAliveInterval: 10000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      meterCommunication:
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+  retry:
+    instances:
+      meterCommunication:
+        maxAttempts: 2
+        waitDuration: 100ms
+        enableExponentialBackoff: false
+  ratelimiter:
+    instances:
+      meterCommunication:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 1s 

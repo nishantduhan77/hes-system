@@ -1,6 +1,6 @@
 package com.hes.collector.simulator;
 
-import com.hes.data.entities.Meter;
+import com.hes.collector.model.Meter;
 import lombok.Data;
 
 import java.util.Random;

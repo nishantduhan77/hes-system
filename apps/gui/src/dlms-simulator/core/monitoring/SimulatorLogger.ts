@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import { PowerQualityEvent } from '../data/DataGenerationManager';
 import * as winston from 'winston';
-import { SecurityLevel } from '../dlms/DlmsProtocol';
+import { SecurityLevel } from '../cosem/data/Types';
 
 export enum LogLevel {
     DEBUG = 'DEBUG',

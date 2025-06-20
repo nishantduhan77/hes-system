@@ -8,8 +8,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@EntityScan(basePackages = {"com.hes.data.entities", "com.hes.common.entity"})
-@EnableJpaRepositories(basePackages = "com.hes.common.repository")
+@EntityScan(basePackages = {"com.hes.data.entities", "com.hes.common.entity", "com.hes.collector.model"})
+@EnableJpaRepositories(basePackages = {"com.hes.common.repository", "com.hes.collector.repository"})
 public class DataCollectorApplication {
     public static void main(String[] args) {
         SpringApplication.run(DataCollectorApplication.class, args);

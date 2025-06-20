@@ -1,9 +1,9 @@
 spring:
   application:
-    name: hes-data-collector
+    name: hes-collector
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/hes
+    url: jdbc:postgresql://localhost:5432/hes
     username: hes_user
     password: hes_password
     driver-class-name: org.postgresql.Driver
@@ -15,14 +15,11 @@ spring:
       max-lifetime: 1200000
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        jdbc:
-          time_zone: UTC
-        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: true
 
   kafka:
@@ -48,9 +45,73 @@ spring:
 
 server:
   port: 8081
+  servlet:
+    context-path: /collector
 
 logging:
   level:
+    root: INFO
     com.hes: DEBUG
     org.springframework: INFO
-    org.hibernate: INFO 
+    org.hibernate: INFO
+  file:
+    name: collector.log
+    max-size: 10MB
+    max-history: 10
+
+dlms:
+  readTimeoutMs: 5000
+  connectTimeoutMs: 10000
+  maxRetries: 3
+  useHdlc: true
+  clientId: 1
+  serverLowerMacAddress: 17
+  serverUpperMacAddress: 0
+  authenticationKey: ${DLMS_AUTH_KEY:41424344454647484950515253545556}
+  encryptionKey: ${DLMS_ENC_KEY:41424344454647484950515253545556}
+  systemTitle: ${DLMS_SYS_TITLE:4D4D4D0000000001}
+  useHighLevelSecurity: false
+  maxPduSize: 1024
+  windowSize: 1
+  maxInfoLength: 128
+  useCompression: false
+  associationTimeout: 120000
+  releaseTimeout: 5000
+  frameTimeout: 1000
+  inactivityTimeout: 180000
+  keepAliveInterval: 60000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      meterCommunication:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60s
+  retry:
+    instances:
+      meterCommunication:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+  ratelimiter:
+    instances:
+      meterCommunication:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 5s 

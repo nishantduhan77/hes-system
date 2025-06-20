@@ -1,0 +1,6 @@
+com\hes\collector\dlms\DataObjectTest.class
+com\hes\collector\DlmsManualTest.class
+com\hes\collector\service\MeterCommunicationServiceIntegrationTest.class
+com\hes\collector\dlms\ObisCodeTest.class
+com\hes\collector\dlms\security\SecuritySuiteTest.class
+com\hes\collector\DlmsBasicTest.class

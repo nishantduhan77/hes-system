@@ -26,12 +26,24 @@ CREATE TABLE daily_load_profile (
 );
 
 -- Convert daily load profile to hypertable
+-- Drop primary key before creating hypertable
+ALTER TABLE daily_load_profile DROP CONSTRAINT daily_load_profile_pkey;
+
+-- Create hypertable
 SELECT create_hypertable(
     'daily_load_profile',
     'capture_time',
     chunk_time_interval => INTERVAL '1 day',
-    if_not_exists => TRUE
+    if_not_exists => TRUE,
+    migrate_data => TRUE,
+    create_default_indexes => FALSE
 );
+
+-- Create unique index including the partitioning column
+CREATE UNIQUE INDEX idx_daily_load_id_time ON daily_load_profile(id, capture_time);
+
+-- Recreate primary key to include partitioning column
+ALTER TABLE daily_load_profile ADD PRIMARY KEY (id, capture_time);
 
 -- Create indexes for daily load profile
 CREATE INDEX idx_daily_load_meter_time ON daily_load_profile(meter_id, capture_time DESC);
@@ -79,6 +91,10 @@ CREATE TABLE instantaneous_profile (
 );
 
 -- Convert instantaneous profile to hypertable
+-- Drop primary key constraint and recreate with capture_time included
+ALTER TABLE instantaneous_profile DROP CONSTRAINT instantaneous_profile_pkey;
+ALTER TABLE instantaneous_profile ADD PRIMARY KEY (id, capture_time);
+
 SELECT create_hypertable(
     'instantaneous_profile',
     'capture_time',
@@ -136,8 +152,13 @@ SELECT create_hypertable(
     'segregated_events',
     'event_time',
     chunk_time_interval => INTERVAL '1 day',
-    if_not_exists => TRUE
+    if_not_exists => TRUE,
+    migrate_data => TRUE
 );
+
+-- Drop and recreate primary key to include event_time
+ALTER TABLE segregated_events DROP CONSTRAINT segregated_events_pkey;
+ALTER TABLE segregated_events ADD PRIMARY KEY (id, event_time);
 
 -- Create indexes for segregated events
 CREATE INDEX idx_events_meter_time ON segregated_events(meter_id, event_time DESC);

@@ -2,17 +2,20 @@
  * Access levels for COSEM attributes
  */
 export enum AccessLevel {
-    NO_ACCESS = 0,
-    READ_ONLY = 1,
-    WRITE_ONLY = 2,
-    READ_WRITE = 3
+    NONE = 0,
+    READ = 1,
+    WRITE = 2,
+    READ_WRITE = 3,
+    ADMIN = 4
 }
 
 /**
  * DLMS data types
  */
 export type DlmsDataType =
-    | 'null-data'
+    | 'null'
+    | 'array'
+    | 'structure'
     | 'boolean'
     | 'bit-string'
     | 'double-long'
@@ -25,6 +28,7 @@ export type DlmsDataType =
     | 'long'
     | 'unsigned'
     | 'long-unsigned'
+    | 'compact-array'
     | 'long64'
     | 'long64-unsigned'
     | 'enum'
@@ -33,9 +37,7 @@ export type DlmsDataType =
     | 'date-time'
     | 'date'
     | 'time'
-    | 'array'
-    | 'structure'
-    | 'compact-array';
+    | 'don\'t-care';
 
 /**
  * Descriptor for COSEM attribute
@@ -136,6 +138,9 @@ export interface ScalarUnit {
  */
 export enum SecurityLevel {
     NONE = 0,
+    AUTHENTICATION = 1,
+    ENCRYPTION = 2,
+    AUTHENTICATION_ENCRYPTION = 3,
     LOW = 1,
     HIGH = 2,
     HIGH_GMAC = 3,
@@ -150,11 +155,11 @@ export enum AuthenticationType {
     NONE = 0,
     LOW = 1,
     HIGH = 2,
-    HIGH_MD5 = 3,
-    HIGH_SHA1 = 4,
-    HIGH_GMAC = 5,
-    HIGH_SHA256 = 6,
-    HIGH_ECDSA = 7
+    MD5 = 3,
+    SHA1 = 4,
+    GMAC = 5,
+    SHA256 = 6,
+    ECDSA = 7
 }
 
 /**

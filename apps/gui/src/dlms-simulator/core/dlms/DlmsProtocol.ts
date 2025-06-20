@@ -1,3 +1,5 @@
+import { SecurityLevel } from '../cosem/data/Types';
+
 /**
  * DLMS Protocol Constants
  */
@@ -28,16 +30,6 @@ export enum DlmsFrameType {
     ACTION_REQUEST = 0xC3,
     ACTION_RESPONSE = 0xC7,
     EVENT_NOTIFICATION = 0xC2
-}
-
-/**
- * DLMS Security Level
- */
-export enum SecurityLevel {
-    NONE = 0,
-    AUTHENTICATION = 1,
-    ENCRYPTION = 2,
-    AUTHENTICATION_ENCRYPTION = 3
 }
 
 /**
