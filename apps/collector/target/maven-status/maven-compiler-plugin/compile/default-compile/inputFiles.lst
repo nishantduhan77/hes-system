@@ -26,6 +26,7 @@ C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\MeterCommunicationService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\MeterService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\MeterTransactionManager.java
+C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\OdrTransactionService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\PingService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\RealTimeMeterCommunicationService.java
 C:\Users\nisha\hes-system\apps\collector\src\main\java\com\hes\collector\service\RelayService.java

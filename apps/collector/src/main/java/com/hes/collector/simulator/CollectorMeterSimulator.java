@@ -66,23 +66,27 @@ public class CollectorMeterSimulator {
     }
 
     public void addMeter(Meter meter) {
-        simulatedMeters.add(new SimulatedMeter(meter));
+        SimulatedMeter simMeter = new SimulatedMeter(meter);
+        simulatedMeters.add(simMeter);
         log.info("Added simulated meter: {}", meter.getSerialNumber());
     }
 
+    /**
+     * Scheduled comprehensive data collection (keeps all transaction data)
+     */
     @Scheduled(fixedRate = 30000) // Every 30 seconds
     public void generateReadings() {
         List<MeterReading> readings = new ArrayList<>();
         Instant now = Instant.now();
         
-        log.info("Starting to generate readings for {} meters at {}", simulatedMeters.size(), now);
+        log.info("Starting to generate comprehensive readings for {} meters at {}", simulatedMeters.size(), now);
 
         for (SimulatedMeter simMeter : simulatedMeters) {
             try {
                 // Update last communication
                 pingService.updateLastCommunication(simMeter.getMeter().getSerialNumber());
 
-                // Generate and save different types of readings
+                // Generate and save different types of readings (scheduled)
                 generateAndSaveInstantaneousReadings(simMeter, now);
                 generateAndSaveBlockLoadProfile(simMeter, now);
                 generateAndSaveDailyLoadProfile(simMeter, now);
@@ -94,22 +98,22 @@ public class CollectorMeterSimulator {
                     generateAndSaveESWF(simMeter, now);
                 }
                 
-                log.debug("Generated readings for meter: {}", simMeter.getMeter().getSerialNumber());
+                log.debug("Generated comprehensive readings for meter: {}", simMeter.getMeter().getSerialNumber());
             } catch (Exception e) {
-                log.error("Error generating readings for meter {}: {}", 
+                log.error("Error generating comprehensive readings for meter {}: {}", 
                     simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
             }
         }
 
-        log.info("Completed generating readings for {} meters", simulatedMeters.size());
+        log.info("Completed generating comprehensive readings for {} meters", simulatedMeters.size());
     }
 
     /**
-     * Enhanced DLMS communication methods
+     * Scheduled DLMS communication (keeps all DLMS operations)
      */
     @Scheduled(fixedRate = 60000) // Every minute
-    public void performDlmsCommunication() {
-        log.info("Starting DLMS communication cycle for {} meters", simulatedMeters.size());
+    public void performScheduledDlmsCommunication() {
+        log.info("Starting scheduled DLMS communication cycle for {} meters", simulatedMeters.size());
         
         for (SimulatedMeter simMeter : simulatedMeters) {
             try {
@@ -125,9 +129,168 @@ public class CollectorMeterSimulator {
                 }
                 
             } catch (Exception e) {
-                log.error("Error in DLMS communication for meter {}: {}", 
+                log.error("Error in scheduled DLMS communication for meter {}: {}", 
                     simMeter.getMeter().getSerialNumber(), e.getMessage(), e);
             }
+        }
+    }
+
+    /**
+     * Scheduled battery and signal stats collection
+     */
+    @Scheduled(fixedRate = 300000) // Every 5 minutes
+    public void collectScheduledBatteryAndSignalStats() {
+        log.info("Starting scheduled battery and signal stats collection for {} meters", simulatedMeters.size());
+        
+        for (SimulatedMeter simMeter : simulatedMeters) {
+            try {
+                // Simulate battery level reading
+                int batteryLevel = 70 + random.nextInt(30); // 70-100%
+                
+                // Simulate signal strength reading
+                int signalStrength = 60 + random.nextInt(40); // 60-100%
+                
+                // Save to database
+                String sql = "INSERT INTO meter_health_stats (meter_serial_number, capture_time, " +
+                           "battery_level, signal_strength, health_status) " +
+                           "VALUES (?, ?, ?, ?, ?)";
+                
+                jdbcTemplate.update(sql,
+                    simMeter.getMeter().getSerialNumber(),
+                    Timestamp.from(Instant.now()),
+                    batteryLevel,
+                    signalStrength,
+                    batteryLevel > 80 && signalStrength > 80 ? "GOOD" : "WARNING"
+                );
+                
+                log.debug("Collected scheduled health stats for meter {}: battery={}%, signal={}%", 
+                    simMeter.getMeter().getSerialNumber(), batteryLevel, signalStrength);
+                
+            } catch (Exception e) {
+                log.error("Error collecting scheduled health stats for meter {}: {}", 
+                    simMeter.getMeter().getSerialNumber(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * ODR: Instantaneous reading only (on-demand)
+     */
+    public void generateInstantaneousReadingsOnDemand(String meterSerialNumber) {
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return;
+        }
+        
+        Instant now = Instant.now();
+        log.info("Starting on-demand instantaneous reading for meter: {} at {}", meterSerialNumber, now);
+
+        try {
+            // Update last communication
+            pingService.updateLastCommunication(simMeter.getMeter().getSerialNumber());
+
+            // Generate and save ONLY instantaneous readings (no block, daily, billing, events)
+            generateAndSaveInstantaneousReadings(simMeter, now);
+            
+            log.info("Completed on-demand instantaneous reading for meter: {}", meterSerialNumber);
+        } catch (Exception e) {
+            log.error("Error generating on-demand instantaneous reading for meter {}: {}", 
+                meterSerialNumber, e.getMessage(), e);
+        }
+    }
+
+    public void generateReadingsOnDemand(String meterSerialNumber) {
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return;
+        }
+        
+        Instant now = Instant.now();
+        log.info("Starting on-demand reading generation for meter: {} at {}", meterSerialNumber, now);
+
+        try {
+            // Update last communication
+            pingService.updateLastCommunication(simMeter.getMeter().getSerialNumber());
+
+            // Generate and save only transaction data (instantaneous readings)
+            generateAndSaveInstantaneousReadings(simMeter, now);
+            
+            log.info("Completed on-demand reading generation for meter: {}", meterSerialNumber);
+        } catch (Exception e) {
+            log.error("Error generating on-demand readings for meter {}: {}", 
+                meterSerialNumber, e.getMessage(), e);
+        }
+    }
+
+    public void performDlmsCommunicationOnDemand(String meterSerialNumber) {
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return;
+        }
+        
+        log.info("Starting on-demand DLMS communication for meter: {}", meterSerialNumber);
+        
+        try {
+            // Perform ping operation
+            performPingOperation(simMeter);
+            
+            // Read meter data via DLMS
+            performDlmsReadOperations(simMeter);
+            
+            log.info("Completed on-demand DLMS communication for meter: {}", meterSerialNumber);
+        } catch (Exception e) {
+            log.error("Error in on-demand DLMS communication for meter {}: {}", 
+                meterSerialNumber, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Enhanced DLMS communication methods (on-demand)
+     */
+    public void performDlmsCommunication(String meterSerialNumber) {
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return;
+        }
+        
+        log.info("Starting DLMS communication for meter: {}", meterSerialNumber);
+        
+        try {
+            // Perform ping operation
+            performPingOperation(simMeter);
+            
+            // Read meter data via DLMS
+            performDlmsReadOperations(simMeter);
+            
+            // Perform relay operations occasionally
+            if (random.nextDouble() < 0.05) { // 5% chance
+                performRelayOperation(simMeter);
+            }
+            
+            log.info("Completed DLMS communication for meter: {}", meterSerialNumber);
+        } catch (Exception e) {
+            log.error("Error in DLMS communication for meter {}: {}", 
+                meterSerialNumber, e.getMessage(), e);
         }
     }
 
@@ -230,40 +393,47 @@ public class CollectorMeterSimulator {
     }
 
     /**
-     * Battery and signal stats collection (scheduled)
+     * Battery and signal stats collection (on-demand)
      */
-    @Scheduled(fixedRate = 300000) // Every 5 minutes
-    public void collectBatteryAndSignalStats() {
-        log.info("Starting battery and signal stats collection for {} meters", simulatedMeters.size());
+    public void collectBatteryAndSignalStats(String meterSerialNumber) {
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return;
+        }
         
-        for (SimulatedMeter simMeter : simulatedMeters) {
-            try {
-                // Simulate battery level reading
-                int batteryLevel = 70 + random.nextInt(30); // 70-100%
+        log.info("Starting battery and signal stats collection for meter: {}", meterSerialNumber);
+        
+        try {
+            // Simulate battery level reading
+            int batteryLevel = 70 + random.nextInt(30); // 70-100%
+            
+            // Simulate signal strength reading
+            int signalStrength = 60 + random.nextInt(40); // 60-100%
+            
+            // Save to database
+            String sql = "INSERT INTO meter_health_stats (meter_serial_number, capture_time, " +
+                       "battery_level, signal_strength, health_status) " +
+                       "VALUES (?, ?, ?, ?, ?)";
+            
+            jdbcTemplate.update(sql,
+                simMeter.getMeter().getSerialNumber(),
+                Timestamp.from(Instant.now()),
+                batteryLevel,
+                signalStrength,
+                batteryLevel > 80 && signalStrength > 80 ? "GOOD" : "WARNING"
+            );
+            
+            log.info("Collected health stats for meter {}: battery={}%, signal={}%", 
+                meterSerialNumber, batteryLevel, signalStrength);
                 
-                // Simulate signal strength reading
-                int signalStrength = 60 + random.nextInt(40); // 60-100%
-                
-                // Save to database
-                String sql = "INSERT INTO meter_health_stats (meter_serial_number, capture_time, " +
-                           "battery_level, signal_strength, health_status) " +
-                           "VALUES (?, ?, ?, ?, ?)";
-                
-                jdbcTemplate.update(sql,
-                    simMeter.getMeter().getSerialNumber(),
-                    Timestamp.from(Instant.now()),
-                    batteryLevel,
-                    signalStrength,
-                    batteryLevel > 80 && signalStrength > 80 ? "GOOD" : "WARNING"
-                );
-                
-                log.debug("Collected health stats for meter {}: battery={}%, signal={}%", 
-                    simMeter.getMeter().getSerialNumber(), batteryLevel, signalStrength);
-                
-            } catch (Exception e) {
-                log.error("Error collecting health stats for meter {}: {}", 
-                    simMeter.getMeter().getSerialNumber(), e.getMessage());
-            }
+        } catch (Exception e) {
+            log.error("Error collecting health stats for meter {}: {}", 
+                meterSerialNumber, e.getMessage());
         }
     }
 
@@ -494,8 +664,187 @@ public class CollectorMeterSimulator {
     private String toBitString(BitSet bits, int length) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < length; i++) {
-            sb.append(bits.get(i) ? '1' : '0');
+            sb.append(bits.get(i) ? "1" : "0");
         }
         return sb.toString();
+    }
+
+    /**
+     * Helper method to perform DLMS read operation for a specific object
+     */
+    private void performDlmsReadOperation(SimulatedMeter simMeter, CosemObject object) {
+        if (simMeter.getMeter().getPort() == null) {
+            log.warn("Simulated meter {} does not have a port. Skipping DLMS read.", simMeter.getMeter().getSerialNumber());
+            return;
+        }
+        
+        try {
+            CompletableFuture<MeterTransaction.Result> future = meterCommunicationService.communicate(
+                simMeter.getMeter().getIpAddress(),
+                simMeter.getMeter().getPort(),
+                object,
+                null,
+                false
+            );
+
+            MeterTransaction.Result result = future.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            
+            if (result.isSuccess()) {
+                log.debug("DLMS read successful for meter {} object {}: {}", 
+                    simMeter.getMeter().getSerialNumber(), object, result.getValue());
+            } else {
+                log.debug("DLMS read failed for meter {} object {}: {}", 
+                    simMeter.getMeter().getSerialNumber(), object, result.getError());
+            }
+        } catch (Exception e) {
+            log.debug("Error reading DLMS object {} for meter {}: {}", 
+                object, simMeter.getMeter().getSerialNumber(), e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method to get CosemObject from string
+     */
+    private CosemObject getCosemObjectFromString(String objectName) {
+        try {
+            return CosemObject.StandardObjects.valueOf(objectName.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown COSEM object: {}", objectName);
+            return null;
+        }
+    }
+
+    /**
+     * ODR: Instantaneous Reading - Read all current meter values
+     */
+    public MeterTransaction performInstantaneousReading(String meterSerialNumber) {
+        log.info("Performing instantaneous reading for meter: {}", meterSerialNumber);
+        
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return null;
+        }
+        
+        try {
+            // Generate ONLY current instantaneous readings (no block, daily, billing, events)
+            generateAndSaveInstantaneousReadings(simMeter, Instant.now());
+            
+            // Create transaction record
+            MeterTransaction transaction = MeterTransaction.builder()
+                .transactionId(UUID.randomUUID())
+                .meterSerialNumber(meterSerialNumber)
+                .ipAddress(simMeter.getMeter().getIpAddress())
+                .port(simMeter.getMeter().getPort())
+                .type(MeterTransaction.TransactionType.INSTANTANEOUS_READING)
+                .status(MeterTransaction.TransactionStatus.COMPLETED)
+                .startTime(Instant.now())
+                .completionTime(Instant.now())
+                .odrOperation("INSTANTANEOUS_READING")
+                .build();
+                
+            MeterTransaction.Result result = new MeterTransaction.Result();
+            result.setSuccess(true);
+            result.setTimestamp(Instant.now());
+            transaction.setResult(result);
+            
+            log.info("Instantaneous reading operation completed successfully for meter: {}", meterSerialNumber);
+            return transaction;
+            
+        } catch (Exception e) {
+            log.error("Error performing instantaneous reading for meter {}: {}", meterSerialNumber, e.getMessage());
+            
+            MeterTransaction transaction = MeterTransaction.builder()
+                .transactionId(UUID.randomUUID())
+                .meterSerialNumber(meterSerialNumber)
+                .ipAddress(simMeter.getMeter().getIpAddress())
+                .port(simMeter.getMeter().getPort())
+                .type(MeterTransaction.TransactionType.INSTANTANEOUS_READING)
+                .status(MeterTransaction.TransactionStatus.FAILED)
+                .startTime(Instant.now())
+                .completionTime(Instant.now())
+                .errorMessage(e.getMessage())
+                .odrOperation("INSTANTANEOUS_READING")
+                .build();
+                
+            MeterTransaction.Result result = new MeterTransaction.Result();
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+            result.setTimestamp(Instant.now());
+            transaction.setResult(result);
+            
+            return transaction;
+        }
+    }
+
+    /**
+     * Enhanced Ping operation for connectivity verification
+     */
+    public MeterTransaction performPingOperation(String meterSerialNumber) {
+        log.info("Performing enhanced ping operation for meter: {}", meterSerialNumber);
+        
+        SimulatedMeter simMeter = simulatedMeters.stream()
+            .filter(sm -> sm.getMeter().getSerialNumber().equals(meterSerialNumber))
+            .findFirst()
+            .orElse(null);
+            
+        if (simMeter == null) {
+            log.warn("Meter not found in simulator: {}", meterSerialNumber);
+            return null;
+        }
+        
+        try {
+            // Perform ping operation
+            performPingOperation(simMeter);
+            
+            // Create transaction record
+            MeterTransaction transaction = MeterTransaction.builder()
+                .transactionId(UUID.randomUUID())
+                .meterSerialNumber(meterSerialNumber)
+                .ipAddress(simMeter.getMeter().getIpAddress())
+                .port(simMeter.getMeter().getPort())
+                .type(MeterTransaction.TransactionType.ENHANCED_PING)
+                .status(MeterTransaction.TransactionStatus.COMPLETED)
+                .startTime(Instant.now())
+                .completionTime(Instant.now())
+                .odrOperation("ENHANCED_PING")
+                .build();
+                
+            MeterTransaction.Result result = new MeterTransaction.Result();
+            result.setSuccess(true);
+            result.setTimestamp(Instant.now());
+            transaction.setResult(result);
+            
+            log.info("Enhanced ping operation completed successfully for meter: {}", meterSerialNumber);
+            return transaction;
+            
+        } catch (Exception e) {
+            log.error("Error performing enhanced ping operation for meter {}: {}", meterSerialNumber, e.getMessage());
+            
+            MeterTransaction transaction = MeterTransaction.builder()
+                .transactionId(UUID.randomUUID())
+                .meterSerialNumber(meterSerialNumber)
+                .ipAddress(simMeter.getMeter().getIpAddress())
+                .port(simMeter.getMeter().getPort())
+                .type(MeterTransaction.TransactionType.ENHANCED_PING)
+                .status(MeterTransaction.TransactionStatus.FAILED)
+                .startTime(Instant.now())
+                .completionTime(Instant.now())
+                .errorMessage(e.getMessage())
+                .odrOperation("ENHANCED_PING")
+                .build();
+                
+            MeterTransaction.Result result = new MeterTransaction.Result();
+            result.setSuccess(false);
+            result.setError(e.getMessage());
+            result.setTimestamp(Instant.now());
+            transaction.setResult(result);
+            
+            return transaction;
+        }
     }
 }

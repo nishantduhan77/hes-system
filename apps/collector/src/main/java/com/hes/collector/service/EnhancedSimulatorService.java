@@ -56,40 +56,35 @@ public class EnhancedSimulatorService {
         }
     }
 
+    /**
+     * Scheduled comprehensive data collection (keeps all transaction data)
+     */
     @Scheduled(fixedRate = 30000) // Generate readings every 30 seconds
     public void generateReadings() {
         try {
-            log.info("Starting to generate readings with enhanced DLMS features...");
+            log.info("Starting to generate comprehensive readings with enhanced DLMS features...");
             simulator.generateReadings();
-            log.info("Successfully generated readings for all meters");
+            log.info("Successfully generated comprehensive readings for all meters");
         } catch (Exception e) {
-            log.error("Error generating readings: {}", e.getMessage(), e);
+            log.error("Error generating comprehensive readings: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * Enhanced DLMS communication with retry and monitoring
+     * Scheduled enhanced DLMS communication (keeps all DLMS operations)
      */
     @Scheduled(fixedRate = 60000) // Every minute
     public void performEnhancedDlmsCommunication() {
-        log.info("Starting enhanced DLMS communication cycle");
+        log.info("Starting scheduled enhanced DLMS communication cycle");
         
         List<Meter> meters = meterService.getAllMeters();
         for (Meter meter : meters) {
             try {
-                // Perform ping with retry mechanism
-                performPingWithRetry(meter);
-                
-                // Read meter data with circuit breaker protection
-                performProtectedReadOperations(meter);
-                
-                // Perform relay operations with transaction management
-                if (shouldPerformRelayOperation(meter)) {
-                    performRelayOperationWithTransaction(meter);
-                }
+                // Use the scheduled method
+                simulator.performScheduledDlmsCommunication();
                 
             } catch (Exception e) {
-                log.error("Error in enhanced DLMS communication for meter {}: {}", 
+                log.error("Error in scheduled enhanced DLMS communication for meter {}: {}", 
                     meter.getSerialNumber(), e.getMessage(), e);
             }
         }
@@ -279,6 +274,28 @@ public class EnhancedSimulatorService {
      * Get simulator status
      */
     public String getSimulatorStatus() {
-        return "Enhanced DLMS Simulator is running with integrated communication services";
+        try {
+            List<Meter> meters = meterService.getAllMeters();
+            return String.format("Enhanced Simulator Status: %d meters loaded, DLMS communication active", meters.size());
+        } catch (Exception e) {
+            log.error("Error getting simulator status: {}", e.getMessage());
+            return "Enhanced Simulator Status: Error retrieving status";
+        }
+    }
+
+    /**
+     * ODR: Instantaneous Reading - Read all current meter values
+     */
+    public MeterTransaction performInstantaneousReading(String meterSerialNumber) {
+        log.info("EnhancedSimulatorService: Performing instantaneous reading for meter: {}", meterSerialNumber);
+        return simulator.performInstantaneousReading(meterSerialNumber);
+    }
+
+    /**
+     * ODR: Enhanced Ping operation for connectivity verification
+     */
+    public MeterTransaction performPingOperation(String meterSerialNumber) {
+        log.info("EnhancedSimulatorService: Performing enhanced ping operation for meter: {}", meterSerialNumber);
+        return simulator.performPingOperation(meterSerialNumber);
     }
 } 

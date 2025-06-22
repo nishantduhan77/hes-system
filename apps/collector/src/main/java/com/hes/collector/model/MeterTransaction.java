@@ -17,6 +17,12 @@ public class MeterTransaction {
     private Instant completionTime;
     private String errorMessage;
     private Result result;
+    // ODR-specific fields
+    private String odrOperation;        // RC, DC, ENHANCED_PING
+    private String[] cosemObjects;      // For DC operations
+    private String odrRequestId;        // Unique ODR request identifier
+    private Instant odrRequestTime;     // When ODR was requested
+    private String odrResponseData;     // ODR response data
 
     public MeterTransaction(UUID transactionId, String meterSerialNumber, String ipAddress, int port, TransactionType type, TransactionStatus status, int retryCount, Instant startTime, Instant lastAttemptTime, Instant completionTime, String errorMessage, Result result) {
         this.transactionId = transactionId;
@@ -31,6 +37,9 @@ public class MeterTransaction {
         this.completionTime = completionTime;
         this.errorMessage = errorMessage;
         this.result = result;
+        // Initialize ODR fields
+        this.odrRequestTime = Instant.now();
+        this.odrRequestId = "ODR_" + System.currentTimeMillis();
     }
 
     public MeterTransaction() {}
@@ -40,7 +49,10 @@ public class MeterTransaction {
         READ,
         WRITE,
         CONNECT,
-        DISCONNECT
+        DISCONNECT,
+        // ODR-specific transaction types
+        INSTANTANEOUS_READING,  // Read all current meter values
+        ENHANCED_PING          // Enhanced ping for connectivity verification
     }
 
     public enum TransactionStatus {
@@ -49,7 +61,12 @@ public class MeterTransaction {
         RETRY,
         COMPLETED,
         FAILED,
-        TIMEOUT
+        TIMEOUT,
+        // ODR-specific statuses
+        ODR_REQUESTED,  // ODR request received
+        ODR_PROCESSING, // ODR operation in progress
+        ODR_SUCCESS,    // ODR operation successful
+        ODR_FAILED      // ODR operation failed
     }
 
     public boolean isComplete() {
@@ -99,6 +116,11 @@ public class MeterTransaction {
     public Instant getCompletionTime() { return completionTime; }
     public String getErrorMessage() { return errorMessage; }
     public Result getResult() { return result; }
+    public String getOdrOperation() { return odrOperation; }
+    public String[] getCosemObjects() { return cosemObjects; }
+    public String getOdrRequestId() { return odrRequestId; }
+    public Instant getOdrRequestTime() { return odrRequestTime; }
+    public String getOdrResponseData() { return odrResponseData; }
 
     // Setters for all fields
     public void setTransactionId(UUID transactionId) { this.transactionId = transactionId; }
@@ -113,6 +135,11 @@ public class MeterTransaction {
     public void setCompletionTime(Instant completionTime) { this.completionTime = completionTime; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public void setResult(Result result) { this.result = result; }
+    public void setOdrOperation(String odrOperation) { this.odrOperation = odrOperation; }
+    public void setCosemObjects(String[] cosemObjects) { this.cosemObjects = cosemObjects; }
+    public void setOdrRequestId(String odrRequestId) { this.odrRequestId = odrRequestId; }
+    public void setOdrRequestTime(Instant odrRequestTime) { this.odrRequestTime = odrRequestTime; }
+    public void setOdrResponseData(String odrResponseData) { this.odrResponseData = odrResponseData; }
 
     // Static builder method for compatibility
     public static Builder builder() {
@@ -132,6 +159,11 @@ public class MeterTransaction {
         private Instant completionTime;
         private String errorMessage;
         private Result result;
+        private String odrOperation;
+        private String[] cosemObjects;
+        private String odrRequestId;
+        private Instant odrRequestTime;
+        private String odrResponseData;
 
         public Builder transactionId(UUID transactionId) { this.transactionId = transactionId; return this; }
         public Builder meterSerialNumber(String meterSerialNumber) { this.meterSerialNumber = meterSerialNumber; return this; }
@@ -145,10 +177,24 @@ public class MeterTransaction {
         public Builder completionTime(Instant completionTime) { this.completionTime = completionTime; return this; }
         public Builder errorMessage(String errorMessage) { this.errorMessage = errorMessage; return this; }
         public Builder result(Result result) { this.result = result; return this; }
+        public Builder odrOperation(String odrOperation) { this.odrOperation = odrOperation; return this; }
+        public Builder cosemObjects(String[] cosemObjects) { this.cosemObjects = cosemObjects; return this; }
+        public Builder odrRequestId(String odrRequestId) { this.odrRequestId = odrRequestId; return this; }
+        public Builder odrRequestTime(Instant odrRequestTime) { this.odrRequestTime = odrRequestTime; return this; }
+        public Builder odrResponseData(String odrResponseData) { this.odrResponseData = odrResponseData; return this; }
 
         public MeterTransaction build() {
-            return new MeterTransaction(transactionId, meterSerialNumber, ipAddress, port, type, status, 
+            MeterTransaction transaction = new MeterTransaction(transactionId, meterSerialNumber, ipAddress, port, type, status, 
                 retryCount, startTime, lastAttemptTime, completionTime, errorMessage, result);
+            
+            // Set ODR fields
+            transaction.setOdrOperation(odrOperation);
+            transaction.setCosemObjects(cosemObjects);
+            transaction.setOdrRequestId(odrRequestId);
+            transaction.setOdrRequestTime(odrRequestTime);
+            transaction.setOdrResponseData(odrResponseData);
+            
+            return transaction;
         }
     }
 } 

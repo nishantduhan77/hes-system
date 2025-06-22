@@ -2,6 +2,8 @@ package com.hes.collector.service;
 
 import com.hes.collector.model.Meter;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.Map;
 @Slf4j
 @Service
 public class PingService {
+    private static final Logger log = LoggerFactory.getLogger(PingService.class);
     private final JdbcTemplate jdbcTemplate;
     private final RelayService relayService;
 
@@ -22,6 +25,9 @@ public class PingService {
         this.relayService = relayService;
     }
 
+    /**
+     * Scheduled meter communication check
+     */
     @Scheduled(fixedRate = 30000) // Every 30 seconds
     public void checkMeterCommunication() {
         try {
@@ -44,6 +50,30 @@ public class PingService {
             }
         } catch (Exception e) {
             log.error("Error checking meter communication: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ODR: On-demand meter communication check
+     */
+    public void checkMeterCommunicationOnDemand(String meterSerialNumber) {
+        try {
+            // Get specific meter
+            String sql = "SELECT meter_serial_number, last_communication FROM meters WHERE meter_serial_number = ?";
+            Map<String, Object> meter = jdbcTemplate.queryForMap(sql, meterSerialNumber);
+
+            Instant now = Instant.now();
+            Timestamp lastComm = (Timestamp) meter.get("last_communication");
+            
+            if (lastComm != null) {
+                // If no communication for more than 5 minutes, mark as disconnected
+                if (now.minusSeconds(300).isAfter(lastComm.toInstant())) {
+                    relayService.disconnectMeter(meterSerialNumber);
+                    log.warn("Meter {} marked as disconnected due to no communication", meterSerialNumber);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error checking meter communication for {}: {}", meterSerialNumber, e.getMessage(), e);
         }
     }
 
